@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>Story</title>
+    <link rel="stylesheet" href="/shared/base.css" />
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap");
+
+      body {
+        background: #0d1117;
+      }
+
+      .loading-spinner {
+        border-top-color: #c9a227;
+      }
+
+      .loading-text {
+        font-family: "Inter", sans-serif;
+      }
+
+      /* Background Image with blur effect */
+      .bg-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        opacity: 0;
+        filter: blur(8px) brightness(0.4);
+        transform: scale(1.1);
+        animation: fadeInBlur 2s ease-out forwards;
+      }
+
+      @keyframes fadeInBlur {
+        to {
+          opacity: 1;
+        }
+      }
+
+      /* Overlay with vignette */
+      .overlay {
+        background: radial-gradient(
+          ellipse at center,
+          rgba(13, 17, 23, 0.3) 0%,
+          rgba(13, 17, 23, 0.8) 100%
+        );
+        opacity: 1;
+        animation: none;
+      }
+
+      /* Decorative top accent */
+      .top-accent {
+        position: absolute;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60px;
+        height: 3px;
+        background: #c9a227;
+        opacity: 0;
+        animation: fadeIn 0.8s ease-out 0.5s forwards;
+      }
+
+      /* Logo centered at top */
+      .logo-container {
+        position: absolute;
+        top: 110px;
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0;
+        animation: fadeIn 0.8s ease-out 0.8s forwards;
+      }
+
+      .logo-container svg {
+        width: 200px;
+        height: auto;
+      }
+
+      /* Main quote container - centered */
+      .quote-container {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 100%;
+        padding: 0 100px;
+        text-align: center;
+      }
+
+      /* Large quotation mark */
+      .quote-mark {
+        font-family: "Playfair Display", serif;
+        font-size: 300px;
+        line-height: 0.5;
+        color: #c9a227;
+        opacity: 0;
+        animation: scaleIn 0.6s ease-out 1s forwards;
+      }
+
+      @keyframes scaleIn {
+        0% {
+          opacity: 0;
+          transform: scale(0.5);
+        }
+        100% {
+          opacity: 0.3;
+          transform: scale(1);
+        }
+      }
+
+      /* The quote text (excerpt) */
+      .quote-text {
+        font-family: "Playfair Display", serif;
+        font-size: 52px;
+        font-weight: 400;
+        font-style: italic;
+        line-height: 1.4;
+        color: #ffffff;
+        margin: -60px 0 50px 0;
+        opacity: 0;
+        transform: translateY(30px);
+        animation: slideUp 0.8s ease-out 1.5s forwards;
+      }
+
+      /* Divider line */
+      .quote-divider {
+        width: 100px;
+        height: 2px;
+        background: #c9a227;
+        margin: 0 auto 40px auto;
+        opacity: 0;
+        transform: scaleX(0);
+        animation: expandLine 0.6s ease-out 2.5s forwards;
+      }
+
+      /* Title below quote */
+      .quote-title {
+        font-family: "Inter", sans-serif;
+        font-size: 32px;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.9);
+        text-transform: uppercase;
+        letter-spacing: 3px;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: slideUp 0.6s ease-out 3s forwards;
+      }
+
+      /* Category tag */
+      .category-tag {
+        position: absolute;
+        top: 250px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-family: "Inter", sans-serif;
+        font-size: 18px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 4px;
+        color: #c9a227;
+        opacity: 0;
+        animation: fadeIn 0.6s ease-out 1.2s forwards;
+      }
+
+      /* Footer area */
+      .footer {
+        position: absolute;
+        bottom: 80px;
+        left: 100px;
+        right: 100px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 30px;
+        border-top: 1px solid rgba(201, 162, 39, 0.3);
+        opacity: 0;
+        animation: fadeIn 0.6s ease-out 4s forwards;
+      }
+
+      .source {
+        font-family: "Inter", sans-serif;
+        font-size: 22px;
+        font-weight: 400;
+        color: rgba(255, 255, 255, 0.6);
+      }
+
+      .date {
+        font-family: "Inter", sans-serif;
+        font-size: 22px;
+        font-weight: 400;
+        color: rgba(255, 255, 255, 0.6);
+      }
+
+      /* Image credit */
+      .image-credit {
+        position: absolute;
+        bottom: 150px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-family: "Inter", sans-serif;
+        font-size: 16px;
+        color: rgba(255, 255, 255, 0.4);
+        opacity: 0;
+        animation: fadeIn 0.5s ease-out 5s forwards;
+      }
+
+      /* Status badge */
+      .status-badge {
+        position: absolute;
+        top: 200px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-family: "Inter", sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="loading-container" id="loading">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Loading story...</div>
+    </div>
+
+    <div class="bg-image-container">
+      <img class="bg-image" id="bgImage" alt="" />
+    </div>
+
+    <div class="overlay"></div>
+
+    <div class="top-accent"></div>
+    <div class="logo-container" id="logo"></div>
+    <div class="category-tag" id="category"></div>
+    <div class="status-badge" id="statusBadge"></div>
+
+    <div class="quote-container">
+      <div class="quote-mark">"</div>
+      <p class="quote-text" id="excerpt"></p>
+      <div class="quote-divider"></div>
+      <h1 class="quote-title" id="title"></h1>
+    </div>
+
+    <div class="image-credit" id="imageCredit"></div>
+
+    <div class="footer">
+      <div class="source" id="source"></div>
+      <div class="date" id="date"></div>
+    </div>
+
+    <script src="/shared/story.js"></script>
+    <script src="/shared/components.js"></script>
+    <script>
+      const SC = window.StoryComponents;
+
+      async function renderContent(articleData) {
+        SC.hideLoading();
+        SC.insertLogo("logo", "#c9a227");
+        SC.setStatusBadge("statusBadge", articleData);
+        SC.setText("category", articleData.category);
+        SC.setText("title", articleData.title);
+        SC.setText("excerpt", articleData.excerpt);
+        SC.setText("source", articleData.source);
+        SC.setDate("date", articleData.date);
+        SC.setImageCredit("imageCredit", articleData.imageCredit);
+
+        if (articleData.imageUrl) {
+          const bgImage = document.getElementById("bgImage");
+          bgImage.src = articleData.imageUrl;
+          await SC.waitForImage(bgImage);
+        }
+      }
+
+      async function animateContent() {
+        return SC.waitForAnimation(10000);
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        window.StoryMaker.initStory({ renderContent, animateContent });
+      });
+    </script>
+  </body>
+</html>

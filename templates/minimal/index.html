@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>Story</title>
+    <link rel="stylesheet" href="/shared/base.css" />
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap");
+
+      body {
+        background: #fafafa;
+      }
+
+      .loading-spinner {
+        border-color: rgba(0, 0, 0, 0.1);
+        border-top-color: #1a1a1a;
+      }
+
+      .loading-text {
+        font-family: "DM Sans", sans-serif;
+        color: rgba(0, 0, 0, 0.5);
+      }
+
+      /* Small image at top */
+      .image-frame {
+        position: absolute;
+        top: 120px;
+        left: 100px;
+        right: 100px;
+        height: 600px;
+        border-radius: 16px;
+        overflow: hidden;
+        opacity: 0;
+        transform: translateY(30px);
+        animation: slideUp 0.8s ease-out 0.5s forwards;
+      }
+
+      .bg-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+      }
+
+      /* Content area */
+      .content {
+        position: absolute;
+        top: 780px;
+        left: 100px;
+        right: 100px;
+        bottom: 100px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Category pill */
+      .category-pill {
+        display: inline-block;
+        align-self: flex-start;
+        font-family: "DM Sans", sans-serif;
+        font-size: 20px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: #1a1a1a;
+        padding: 12px 24px;
+        background: #fff;
+        border: 2px solid #1a1a1a;
+        border-radius: 100px;
+        margin-bottom: 50px;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: slideUp 0.5s ease-out 1s forwards;
+      }
+
+      /* Title */
+      .title {
+        font-family: "DM Serif Display", serif;
+        font-size: 72px;
+        font-weight: 400;
+        line-height: 1.1;
+        color: #1a1a1a;
+        margin-bottom: 40px;
+        opacity: 0;
+        transform: translateY(30px);
+        animation: slideUp 0.7s ease-out 1.5s forwards;
+      }
+
+      /* Excerpt */
+      .excerpt {
+        font-family: "DM Sans", sans-serif;
+        font-size: 32px;
+        font-weight: 400;
+        line-height: 1.6;
+        color: #666;
+        margin-bottom: auto;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: slideUp 0.6s ease-out 2.2s forwards;
+      }
+
+      /* Footer */
+      .footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        padding-top: 40px;
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
+        opacity: 0;
+        animation: fadeIn 0.6s ease-out 3s forwards;
+      }
+
+      .footer-left {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .source {
+        font-family: "DM Sans", sans-serif;
+        font-size: 22px;
+        font-weight: 600;
+        color: #1a1a1a;
+      }
+
+      .date {
+        font-family: "DM Sans", sans-serif;
+        font-size: 20px;
+        font-weight: 400;
+        color: #999;
+      }
+
+      .logo-area {
+        opacity: 0;
+        animation: fadeIn 0.6s ease-out 3.5s forwards;
+      }
+
+      .logo-area svg {
+        width: 180px;
+        height: auto;
+      }
+
+      /* Image credit */
+      .image-credit {
+        position: absolute;
+        top: 740px;
+        right: 100px;
+        font-family: "DM Sans", sans-serif;
+        font-size: 16px;
+        color: #999;
+        opacity: 0;
+        animation: fadeIn 0.5s ease-out 4s forwards;
+      }
+
+      /* Status badge - minimal style */
+      .status-badge {
+        position: absolute;
+        top: 140px;
+        left: 120px;
+        font-family: "DM Sans", sans-serif;
+        font-size: 18px;
+        letter-spacing: 2px;
+        z-index: 10;
+      }
+
+      .status-badge.breaking,
+      .status-badge.live {
+        background: #1a1a1a;
+      }
+
+      .status-badge.developing {
+        background: #666;
+        color: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="loading-container" id="loading">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Loading story...</div>
+    </div>
+
+    <div class="status-badge" id="statusBadge"></div>
+
+    <div class="image-frame">
+      <img class="bg-image" id="bgImage" alt="" />
+    </div>
+
+    <div class="image-credit" id="imageCredit"></div>
+
+    <div class="content">
+      <div class="category-pill" id="category"></div>
+      <h1 class="title" id="title"></h1>
+      <p class="excerpt" id="excerpt"></p>
+      <div class="footer">
+        <div class="footer-left">
+          <div class="source" id="source"></div>
+          <div class="date" id="date"></div>
+        </div>
+        <div class="logo-area" id="logo"></div>
+      </div>
+    </div>
+
+    <script src="/shared/story.js"></script>
+    <script src="/shared/components.js"></script>
+    <script>
+      const SC = window.StoryComponents;
+
+      async function renderContent(articleData) {
+        SC.hideLoading();
+        SC.insertLogo("logo", "#1a1a1a");
+        SC.setStatusBadge("statusBadge", articleData);
+        SC.setText("category", articleData.category || "News");
+        SC.setText("title", articleData.title);
+        SC.setText("excerpt", articleData.excerpt);
+        SC.setText("source", articleData.source);
+        SC.setDate("date", articleData.date);
+        SC.setImageCredit("imageCredit", articleData.imageCredit);
+
+        if (articleData.imageUrl) {
+          const bgImage = document.getElementById("bgImage");
+          bgImage.src = articleData.imageUrl;
+          await SC.waitForImage(bgImage);
+        }
+      }
+
+      async function animateContent() {
+        return SC.waitForAnimation(10000);
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        window.StoryMaker.initStory({ renderContent, animateContent });
+      });
+    </script>
+  </body>
+</html>

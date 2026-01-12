@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>Story</title>
+    <link rel="stylesheet" href="/shared/base.css" />
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap");
+
+      body {
+        background: #0a0a0a;
+      }
+
+      .loading-spinner {
+        border-top-color: #ff0033;
+      }
+
+      .loading-text {
+        font-family: "Barlow", sans-serif;
+      }
+
+      /* Background image with red tint */
+      .bg-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        opacity: 0;
+        filter: saturate(0.8);
+        animation: flashIn 0.3s ease-out forwards;
+      }
+
+      @keyframes flashIn {
+        0% {
+          opacity: 0;
+        }
+        50% {
+          opacity: 1;
+        }
+        70% {
+          opacity: 0.7;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+
+      /* Heavy dark overlay */
+      .overlay {
+        background: linear-gradient(
+          180deg,
+          rgba(10, 10, 10, 0.6) 0%,
+          rgba(10, 10, 10, 0.4) 40%,
+          rgba(10, 10, 10, 0.7) 70%,
+          rgba(10, 10, 10, 0.98) 100%
+        );
+        opacity: 1;
+        animation: none;
+      }
+
+      /* Red accent bars */
+      .accent-bar-top {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 12px;
+        background: #ff0033;
+        transform: scaleX(0);
+        transform-origin: left;
+        animation: expandLine 0.4s ease-out 0.2s forwards;
+      }
+
+      .accent-bar-bottom {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 12px;
+        background: #ff0033;
+        transform: scaleX(0);
+        transform-origin: right;
+        animation: expandLine 0.4s ease-out 0.2s forwards;
+      }
+
+      /* BREAKING banner */
+      .breaking-banner {
+        position: absolute;
+        top: 80px;
+        left: 0;
+        right: 0;
+        background: #ff0033;
+        padding: 25px 80px;
+        display: flex;
+        align-items: center;
+        gap: 30px;
+        opacity: 0;
+        transform: translateY(-100%);
+        animation: slideDown 0.5s ease-out 0.4s forwards;
+      }
+
+      .breaking-label {
+        font-family: "Archivo Black", sans-serif;
+        font-size: 48px;
+        color: #fff;
+        text-transform: uppercase;
+        letter-spacing: 6px;
+        animation: pulse-text 1s ease-in-out 1s infinite;
+      }
+
+      @keyframes pulse-text {
+        0%, 100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.7;
+        }
+      }
+
+      .breaking-line {
+        flex: 1;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.5);
+      }
+
+      /* Logo */
+      .logo-area {
+        position: absolute;
+        top: 200px;
+        left: 80px;
+        opacity: 0;
+        animation: fadeIn 0.5s ease-out 0.8s forwards;
+      }
+
+      .logo-area svg {
+        width: 280px;
+        height: auto;
+      }
+
+      /* Main content */
+      .content {
+        position: absolute;
+        bottom: 100px;
+        left: 80px;
+        right: 80px;
+      }
+
+      /* Location tag */
+      .location-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 30px;
+        opacity: 0;
+        transform: translateX(-30px);
+        animation: slideRight 0.4s ease-out 1s forwards;
+      }
+
+      .location-dot {
+        width: 12px;
+        height: 12px;
+        background: #ff0033;
+        border-radius: 50%;
+        animation: blink 1s ease-in-out 1.5s infinite;
+      }
+
+      @keyframes blink {
+        0%, 100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.3;
+        }
+      }
+
+      .location {
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 32px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 4px;
+        color: #ff0033;
+      }
+
+      /* Title - very bold */
+      .title {
+        font-family: "Archivo Black", sans-serif;
+        font-size: 76px;
+        text-transform: uppercase;
+        line-height: 1.0;
+        color: #fff;
+        margin-bottom: 40px;
+        opacity: 0;
+        transform: translateY(50px);
+        animation: slideUp 0.5s ease-out 1.3s forwards;
+      }
+
+      /* Excerpt */
+      .excerpt {
+        font-family: "Barlow", sans-serif;
+        font-size: 34px;
+        font-weight: 400;
+        line-height: 1.5;
+        color: rgba(255, 255, 255, 0.85);
+        max-width: 850px;
+        margin-bottom: 50px;
+        padding-left: 30px;
+        border-left: 4px solid #ff0033;
+        opacity: 0;
+        transform: translateY(30px);
+        animation: slideUp 0.5s ease-out 1.8s forwards;
+      }
+
+      /* Footer */
+      .footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 30px;
+        border-top: 2px solid rgba(255, 0, 51, 0.3);
+        opacity: 0;
+        animation: fadeIn 0.5s ease-out 2.3s forwards;
+      }
+
+      .source {
+        font-family: "Barlow", sans-serif;
+        font-size: 24px;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.7);
+        text-transform: uppercase;
+        letter-spacing: 2px;
+      }
+
+      .timestamp {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .live-dot {
+        width: 14px;
+        height: 14px;
+        background: #ff0033;
+        border-radius: 50%;
+        animation: blink 1s ease-in-out infinite;
+      }
+
+      .date {
+        font-family: "Barlow", sans-serif;
+        font-size: 24px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.6);
+      }
+
+      /* Image credit */
+      .image-credit {
+        position: absolute;
+        bottom: 400px;
+        right: 80px;
+        font-family: "Barlow", sans-serif;
+        font-size: 18px;
+        color: rgba(255, 255, 255, 0.4);
+        opacity: 0;
+        animation: fadeIn 0.5s ease-out 3s forwards;
+      }
+
+      /* Hide default status badge - we use the breaking banner */
+      .status-badge {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="loading-container" id="loading">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Loading story...</div>
+    </div>
+
+    <div class="bg-image-container">
+      <img class="bg-image" id="bgImage" alt="" />
+    </div>
+
+    <div class="overlay"></div>
+
+    <!-- Accent bars -->
+    <div class="accent-bar-top"></div>
+    <div class="accent-bar-bottom"></div>
+
+    <!-- Breaking banner -->
+    <div class="breaking-banner" id="breakingBanner">
+      <span class="breaking-label" id="breakingLabel">Breaking</span>
+      <div class="breaking-line"></div>
+    </div>
+
+    <div class="logo-area" id="logo"></div>
+
+    <div class="image-credit" id="imageCredit"></div>
+
+    <div class="content">
+      <div class="location-tag">
+        <div class="location-dot"></div>
+        <div class="location" id="location"></div>
+      </div>
+      <h1 class="title" id="title"></h1>
+      <p class="excerpt" id="excerpt"></p>
+      <div class="footer">
+        <div class="source" id="source"></div>
+        <div class="timestamp">
+          <div class="live-dot"></div>
+          <div class="date" id="date"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/shared/story.js"></script>
+    <script src="/shared/components.js"></script>
+    <script>
+      const SC = window.StoryComponents;
+
+      async function renderContent(articleData) {
+        SC.hideLoading();
+        SC.insertLogo("logo", "#ff0033");
+        SC.setText("location", articleData.location || articleData.category);
+        SC.setText("title", articleData.title);
+        SC.setText("excerpt", articleData.excerpt);
+        SC.setText("source", articleData.source);
+        SC.setImageCredit("imageCredit", articleData.imageCredit);
+
+        // Set breaking label based on status
+        const label = document.getElementById("breakingLabel");
+        if (articleData.isLive) {
+          label.textContent = "LIVE";
+        } else if (articleData.isDeveloping) {
+          label.textContent = "DEVELOPING";
+        } else {
+          label.textContent = "BREAKING";
+        }
+
+        // Format time more urgently
+        if (articleData.date) {
+          const now = new Date();
+          const diff = now - articleData.date;
+          const mins = Math.floor(diff / 60000);
+          if (mins < 60) {
+            document.getElementById("date").textContent = `${mins} MIN AGO`;
+          } else if (mins < 1440) {
+            const hrs = Math.floor(mins / 60);
+            document.getElementById("date").textContent = `${hrs} HR${hrs > 1 ? 'S' : ''} AGO`;
+          } else {
+            SC.setDate("date", articleData.date);
+          }
+        }
+
+        if (articleData.imageUrl) {
+          const bgImage = document.getElementById("bgImage");
+          bgImage.src = articleData.imageUrl;
+          await SC.waitForImage(bgImage);
+        }
+      }
+
+      async function animateContent() {
+        return SC.waitForAnimation(10000);
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        window.StoryMaker.initStory({ renderContent, animateContent });
+      });
+    </script>
+  </body>
+</html>

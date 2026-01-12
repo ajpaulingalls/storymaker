@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>Story</title>
+    <link rel="stylesheet" href="/shared/base.css" />
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Newsreader:wght@400;500;600&display=swap");
+
+      body {
+        background: #111;
+      }
+
+      .loading-spinner {
+        border-top-color: #fa9000;
+      }
+
+      .loading-text {
+        font-family: "Space Grotesk", sans-serif;
+      }
+
+      /* Top half - image */
+      .image-section {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 55%;
+        overflow: hidden;
+      }
+
+      .bg-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        opacity: 0;
+        transform: scale(1.1);
+        animation: zoomFade 1.5s ease-out forwards;
+      }
+
+      @keyframes zoomFade {
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      /* Gradient fade at bottom of image */
+      .image-fade {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 200px;
+        background: linear-gradient(to bottom, transparent, #111);
+      }
+
+      /* Diagonal divider line */
+      .divider-line {
+        position: absolute;
+        top: calc(55% - 4px);
+        left: 0;
+        right: 0;
+        height: 8px;
+        background: linear-gradient(90deg, #fa9000, #e76f51, #fa9000);
+        transform: scaleX(0);
+        transform-origin: left;
+        animation: expandLine 0.8s ease-out 1s forwards;
+        z-index: 10;
+      }
+
+      /* Bottom half - content */
+      .content-section {
+        position: absolute;
+        top: 55%;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #111;
+        padding: 60px 80px 80px 80px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Category and location row */
+      .meta-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 40px;
+        opacity: 0;
+        animation: fadeIn 0.6s ease-out 1.5s forwards;
+      }
+
+      .category {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 24px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 3px;
+        color: #fa9000;
+      }
+
+      .location {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 22px;
+        font-weight: 400;
+        color: rgba(255, 255, 255, 0.5);
+        text-transform: uppercase;
+        letter-spacing: 2px;
+      }
+
+      /* Title */
+      .title {
+        font-family: "Newsreader", serif;
+        font-size: 64px;
+        font-weight: 500;
+        line-height: 1.15;
+        color: #fff;
+        margin-bottom: 35px;
+        opacity: 0;
+        transform: translateY(40px);
+        animation: slideUp 0.7s ease-out 2s forwards;
+      }
+
+      /* Excerpt */
+      .excerpt {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 30px;
+        font-weight: 300;
+        line-height: 1.6;
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: auto;
+        opacity: 0;
+        transform: translateY(30px);
+        animation: slideUp 0.6s ease-out 2.7s forwards;
+      }
+
+      /* Footer */
+      .footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 30px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        opacity: 0;
+        animation: fadeIn 0.6s ease-out 3.5s forwards;
+      }
+
+      .footer-left {
+        display: flex;
+        align-items: center;
+        gap: 30px;
+      }
+
+      .logo-area svg {
+        width: 160px;
+        height: auto;
+      }
+
+      .source {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 20px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.6);
+      }
+
+      .date {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 20px;
+        font-weight: 400;
+        color: rgba(255, 255, 255, 0.4);
+      }
+
+      /* Image credit overlay on image */
+      .image-credit {
+        position: absolute;
+        top: calc(55% - 50px);
+        right: 80px;
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 16px;
+        color: rgba(255, 255, 255, 0.5);
+        opacity: 0;
+        animation: fadeIn 0.5s ease-out 4s forwards;
+        z-index: 5;
+      }
+
+      /* Status badge on image */
+      .status-badge {
+        position: absolute;
+        top: 60px;
+        left: 80px;
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 20px;
+        letter-spacing: 2px;
+        z-index: 10;
+      }
+
+      .status-badge.breaking,
+      .status-badge.live {
+        background: #fa9000;
+        color: #111;
+      }
+
+      .status-badge.developing {
+        background: #f59e0b;
+        color: #111;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="loading-container" id="loading">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Loading story...</div>
+    </div>
+
+    <!-- Top image section -->
+    <div class="image-section">
+      <img class="bg-image" id="bgImage" alt="" />
+      <div class="image-fade"></div>
+    </div>
+
+    <div class="status-badge" id="statusBadge"></div>
+    <div class="image-credit" id="imageCredit"></div>
+    <div class="divider-line"></div>
+
+    <!-- Bottom content section -->
+    <div class="content-section">
+      <div class="meta-row">
+        <div class="category" id="category"></div>
+        <div class="location" id="location"></div>
+      </div>
+      <h1 class="title" id="title"></h1>
+      <p class="excerpt" id="excerpt"></p>
+      <div class="footer">
+        <div class="footer-left">
+          <div class="logo-area" id="logo"></div>
+          <div class="source" id="source"></div>
+        </div>
+        <div class="date" id="date"></div>
+      </div>
+    </div>
+
+    <script src="/shared/story.js"></script>
+    <script src="/shared/components.js"></script>
+    <script>
+      const SC = window.StoryComponents;
+
+      async function renderContent(articleData) {
+        SC.hideLoading();
+        SC.insertLogo("logo", "#fa9000");
+        SC.setStatusBadge("statusBadge", articleData);
+        SC.setText("category", articleData.category);
+        SC.setText("location", articleData.location);
+        SC.setText("title", articleData.title);
+        SC.setText("excerpt", articleData.excerpt);
+        SC.setText("source", articleData.source);
+        SC.setDate("date", articleData.date);
+        SC.setImageCredit("imageCredit", articleData.imageCredit);
+
+        if (articleData.imageUrl) {
+          const bgImage = document.getElementById("bgImage");
+          bgImage.src = articleData.imageUrl;
+          await SC.waitForImage(bgImage);
+        }
+      }
+
+      async function animateContent() {
+        return SC.waitForAnimation(10000);
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        window.StoryMaker.initStory({ renderContent, animateContent });
+      });
+    </script>
+  </body>
+</html>
