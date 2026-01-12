@@ -175,8 +175,15 @@ async function initStory(options = {}) {
       console.warn("StoryMaker: storyReady function not available");
     }
 
+    // Small delay to ensure recording has started before animations begin
+    await new Promise(resolve => setTimeout(resolve, 175));
+
+    // Start animations by removing the paused state
+    console.log("StoryMaker: Starting animations...");
+    document.body.classList.add("animations-started");
+
     // Run animations
-    console.log("StoryMaker: Starting animation...");
+    console.log("StoryMaker: Waiting for animation to complete...");
     await animateContent();
     console.log("StoryMaker: Animation complete");
 

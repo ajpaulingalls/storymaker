@@ -21,6 +21,11 @@
         background: #0a0a0a;
       }
 
+      /* Pause all animations until recording has started */
+      body:not(.animations-started) * {
+        animation-play-state: paused !important;
+      }
+
       /* Background Image Layer */
       .bg-image {
         position: absolute;
