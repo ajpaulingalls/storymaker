@@ -21,40 +21,31 @@
         background: #0a0a0a;
       }
 
-      /* Background Image Container */
-      .bg-image-container {
+      /* Background Image Layer */
+      .bg-image {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        overflow: hidden;
-      }
-
-      /* Background Image Layer */
-      .bg-image {
-        height: 100%;
-        width: auto;
+        background-size: cover;
+        background-position: center;
         opacity: 0;
-        will-change: transform, opacity;
-        animation: fadeInImage 1s ease-out forwards;
+        transform: scale(1);
+        animation: kenBurns 12s ease-out forwards;
       }
 
-      @keyframes fadeInImage {
+      @keyframes kenBurns {
         0% {
           opacity: 0;
+          transform: scale(1);
+        }
+        5% {
+          opacity: 1;
         }
         100% {
           opacity: 1;
-        }
-      }
-
-      @keyframes panLeftToRight {
-        0% {
-          transform: translateX(0);
-        }
-        100% {
-          transform: translateX(var(--pan-distance));
+          transform: scale(1.15);
         }
       }
 
@@ -345,9 +336,7 @@
     </div>
 
     <!-- Background Image -->
-    <div class="bg-image-container">
-      <img class="bg-image" id="bgImage" alt="" />
-    </div>
+    <div class="bg-image" id="bgImage"></div>
 
     <!-- Overlay -->
     <div class="overlay" id="overlay"></div>
@@ -396,7 +385,7 @@
         // Set background image
         if (articleData.imageUrl) {
           const bgImage = document.getElementById("bgImage");
-          bgImage.src = articleData.imageUrl;
+          bgImage.style.backgroundImage = `url('${articleData.imageUrl}')`;
         }
 
         // Set status badge
@@ -443,23 +432,13 @@
           ).textContent = `Photo: ${articleData.imageCredit}`;
         }
 
-        // Wait for background image to load and setup pan animation
+        // Wait for background image to load
         if (articleData.imageUrl) {
-          const bgImage = document.getElementById("bgImage");
           await new Promise((resolve) => {
-            bgImage.onload = () => {
-              // Calculate pan distance: how far to move left to show the right side
-              // Image width at 100% height minus viewport width
-              const viewportWidth = 1080;
-              const panDistance = -(bgImage.offsetWidth - viewportWidth);
-              bgImage.style.setProperty("--pan-distance", `${panDistance}px`);
-              // Start the pan animation after fade-in completes
-              setTimeout(() => {
-                bgImage.style.animation = "fadeInImage 0.5s ease-out forwards, panLeftToRight 11s linear forwards";
-              }, 100);
-              resolve();
-            };
-            bgImage.onerror = resolve; // Continue even if image fails
+            const img = new Image();
+            img.onload = resolve;
+            img.onerror = resolve; // Continue even if image fails
+            img.src = articleData.imageUrl;
           });
         }
       }
