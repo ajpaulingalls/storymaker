@@ -6,15 +6,29 @@
     <title>Story</title>
     <link rel="stylesheet" href="/shared/base.css" />
     <style>
-      @import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Source+Sans+3:wght@300;400;600;700&display=swap");
+      @import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Source+Sans+3:wght@300;400;600;700&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap");
+
+      :root {
+        --accent-color: #fa9000;
+        --accent-color-alt: #e76f51;
+      }
 
       body {
         background: #000;
       }
 
+      body.rtl {
+        font-family: "Noto Sans Arabic", "Source Sans 3", sans-serif;
+      }
+
+      body.rtl .headline,
+      body.rtl .category {
+        font-family: "Noto Sans Arabic", "Bebas Neue", sans-serif;
+      }
+
       /* Template-specific loading spinner color */
       .loading-spinner {
-        border-top-color: #ff6b35;
+        border-top-color: var(--accent-color);
       }
 
       .loading-text {
@@ -67,10 +81,14 @@
         left: 0;
         width: 100%;
         height: 8px;
-        background: linear-gradient(90deg, #ff6b35, #f7c531, #ff6b35);
+        background: linear-gradient(90deg, var(--accent-color), var(--accent-color-alt), var(--accent-color));
         transform: scaleX(0);
         transform-origin: left;
         animation: expandLine 0.8s ease-out 0.5s forwards;
+      }
+
+      body.rtl .accent-line {
+        transform-origin: right;
       }
 
       /* Top section with logo and category */
@@ -117,8 +135,12 @@
         font-family: "Bebas Neue", sans-serif;
         font-size: 42px;
         letter-spacing: 4px;
-        color: #ff6b35;
+        color: var(--accent-color);
         text-transform: uppercase;
+      }
+
+      body.rtl .category {
+        letter-spacing: 0;
       }
 
       .location {
@@ -154,13 +176,18 @@
         text-transform: uppercase;
         letter-spacing: 2px;
         padding: 10px 20px;
-        background: rgba(255, 107, 53, 0.15);
-        border: 2px solid rgba(255, 107, 53, 0.5);
-        color: #ff6b35;
+        background: color-mix(in srgb, var(--accent-color) 15%, transparent);
+        border: 2px solid color-mix(in srgb, var(--accent-color) 50%, transparent);
+        color: var(--accent-color);
         border-radius: 4px;
         opacity: 0;
         transform: translateY(20px);
         animation: tagIn 0.4s ease-out forwards;
+      }
+
+      body.rtl .tag {
+        font-family: "Noto Sans Arabic", "Source Sans 3", sans-serif;
+        letter-spacing: 0;
       }
 
       .tag:nth-child(1) { animation-delay: 1.2s; }
@@ -204,12 +231,20 @@
       .headline-accent {
         width: 120px;
         height: 8px;
-        background: #ff6b35;
+        background: var(--accent-color);
         margin-bottom: 40px;
         opacity: 0;
         transform: scaleX(0);
         transform-origin: left;
         animation: expandLine 0.5s ease-out 4s forwards;
+      }
+
+      body.rtl .headline-accent {
+        transform-origin: right;
+      }
+
+      body.rtl .headline {
+        letter-spacing: 0;
       }
 
       /* Summary text */
@@ -269,7 +304,7 @@
         font-family: "Source Sans 3", sans-serif;
         font-size: 28px;
         font-weight: 600;
-        color: #f7c531;
+        color: var(--accent-color-alt);
         letter-spacing: 1px;
       }
 
@@ -295,6 +330,12 @@
         text-orientation: mixed;
         opacity: 0;
         animation: fadeIn 0.5s ease-out 6s forwards;
+      }
+
+      body.rtl .image-credit {
+        right: auto;
+        left: 80px;
+        top: 240px;
       }
 
       /* Status indicator */
@@ -412,11 +453,15 @@
 
       async function renderContent(articleData) {
         SC.hideLoading();
-        SC.insertLogo("logo", "#ff6b35");
+        // This template uses its own accent colors (orange/yellow), but respects site-specific colors for Arabic
+        if (articleData.isRTL) {
+          SC.applyAccentColors(articleData);
+        }
+        SC.insertLogo("logo", articleData.isRTL ? SC.getAccentColor(articleData) : "#fa9000");
         SC.setStatusBadge("statusIndicator", articleData);
         SC.setText("category", articleData.category);
         SC.setText("location", articleData.location);
-        SC.setImageCredit("imageCredit", articleData.imageCredit);
+        SC.setImageCredit("imageCredit", articleData.imageCredit, articleData.isRTL);
 
         // Build tags from article data
         const tags = [];
@@ -435,9 +480,16 @@
 
         // Set summary
         SC.setText("summary", articleData.socialMediaSummary || articleData.excerpt);
-        SC.setText("source", articleData.source || "Al Jazeera");
-        SC.setDate("date", articleData.date);
+        SC.setText("source", articleData.source);
+        SC.setDate("date", articleData.date, articleData.locale);
         SC.setText("shortUrl", articleData.shortUrl);
+        
+        // Update swipe hint text for Arabic
+        if (articleData.isRTL) {
+          const swipeHint = document.querySelector(".swipe-hint");
+          if (swipeHint) swipeHint.textContent = "اسحب للقراءة";
+
+        }
 
         // Set background image
         if (articleData.imageUrl) {

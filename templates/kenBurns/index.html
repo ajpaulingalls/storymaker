@@ -6,15 +6,29 @@
     <title>Story</title>
     <link rel="stylesheet" href="/shared/base.css" />
     <style>
-      @import url("https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700&family=Roboto:wght@300;400;500;700&display=swap");
+      @import url("https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700&family=Roboto:wght@300;400;500;700&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap");
+
+      :root {
+        --accent-color: #fa9000;
+        --accent-color-alt: #e76f51;
+      }
 
       body {
         background: #0a0a0a;
       }
 
+      body.rtl {
+        font-family: "Noto Sans Arabic", "Roboto", sans-serif;
+      }
+
+      body.rtl .title,
+      body.rtl .excerpt {
+        font-family: "Noto Sans Arabic", "Noto Serif", serif;
+      }
+
       /* Template-specific loading spinner color */
       .loading-spinner {
-        border-top-color: #fa9f42;
+        border-top-color: var(--accent-color);
       }
 
       .loading-text {
@@ -60,6 +74,11 @@
         align-items: center;
       }
 
+      body.rtl .top-bar {
+        direction: ltr;
+        flex-direction: row-reverse;
+      }
+
       .top-bar svg {
         width: 340px;
         height: auto;
@@ -81,6 +100,23 @@
         animation: slideRight 0.5s ease-out 1s forwards;
       }
 
+      body.rtl .tags {
+        margin-left: auto;
+        transform: translateX(30px);
+        animation: slideLeft 0.5s ease-out 1s forwards;
+      }
+
+      @keyframes slideLeft {
+        from {
+          opacity: 0;
+          transform: translateX(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
       .tag {
         font-family: "Roboto", sans-serif;
         font-size: 26px;
@@ -88,9 +124,14 @@
         text-transform: uppercase;
         letter-spacing: 3px;
         padding: 10px 20px;
-        background: rgba(250, 159, 66, 0.9);
+        background: var(--accent-color);
         color: #0a0a0a;
         border-radius: 4px;
+      }
+
+      body.rtl .tag {
+        font-family: "Noto Sans Arabic", "Roboto", sans-serif;
+        letter-spacing: 0;
       }
 
       /* Main content container */
@@ -122,12 +163,16 @@
       .divider {
         width: 100px;
         height: 5px;
-        background: linear-gradient(90deg, #fa9f42, #e76f51);
+        background: linear-gradient(90deg, var(--accent-color), var(--accent-color-alt));
         border-radius: 3px;
         opacity: 0;
         transform: scaleX(0);
         transform-origin: left;
         animation: expandLine 0.5s ease-out 3s forwards;
+      }
+
+      body.rtl .divider {
+        transform-origin: right;
       }
 
       /* Excerpt */
@@ -155,6 +200,11 @@
         animation: fadeIn 0.6s ease-out 5s forwards;
       }
 
+      body.rtl .footer {
+        direction: ltr;
+        flex-direction: row-reverse;
+      }
+
       .source,
       .date {
         font-family: "Roboto", sans-serif;
@@ -173,6 +223,11 @@
         color: rgba(255, 255, 255, 0.6);
         opacity: 0;
         animation: fadeIn 0.5s ease-out 6s forwards;
+      }
+
+      body.rtl .image-credit {
+        left: 80px;
+        right: auto;
       }
     </style>
   </head>
@@ -217,14 +272,15 @@
 
       async function renderContent(articleData) {
         SC.hideLoading();
-        SC.insertLogo("logo", "#fa9000");
+        SC.applyAccentColors(articleData);
+        SC.insertLogo("logo", SC.getAccentColor(articleData));
         SC.setStatusBadge("statusBadge", articleData);
         SC.renderTags("tags", SC.getBasicTags(articleData));
         SC.setText("title", articleData.title);
         SC.setText("excerpt", articleData.excerpt);
         SC.setText("source", articleData.source);
-        SC.setDate("date", articleData.date);
-        SC.setImageCredit("imageCredit", articleData.imageCredit);
+        SC.setDate("date", articleData.date, articleData.locale);
+        SC.setImageCredit("imageCredit", articleData.imageCredit, articleData.isRTL);
 
         // Set background image
         if (articleData.imageUrl) {

@@ -6,14 +6,28 @@
     <title>Story</title>
     <link rel="stylesheet" href="/shared/base.css" />
     <style>
-      @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap");
+      @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap");
+
+      :root {
+        --accent-color: #c9a227;
+        --accent-color-alt: #a88420;
+      }
 
       body {
         background: #0d1117;
       }
 
+      body.rtl {
+        font-family: "Noto Sans Arabic", "Inter", sans-serif;
+      }
+
+      body.rtl .quote-text,
+      body.rtl .quote-mark {
+        font-family: "Noto Sans Arabic", "Playfair Display", serif;
+      }
+
       .loading-spinner {
-        border-top-color: #c9a227;
+        border-top-color: var(--accent-color);
       }
 
       .loading-text {
@@ -57,7 +71,7 @@
         transform: translateX(-50%);
         width: 60px;
         height: 3px;
-        background: #c9a227;
+        background: var(--accent-color);
         opacity: 0;
         animation: fadeIn 0.8s ease-out 0.5s forwards;
       }
@@ -93,7 +107,7 @@
         font-family: "Playfair Display", serif;
         font-size: 300px;
         line-height: 0.5;
-        color: #c9a227;
+        color: var(--accent-color);
         opacity: 0;
         animation: scaleIn 0.6s ease-out 1s forwards;
       }
@@ -127,7 +141,7 @@
       .quote-divider {
         width: 100px;
         height: 2px;
-        background: #c9a227;
+        background: var(--accent-color);
         margin: 0 auto 40px auto;
         opacity: 0;
         transform: scaleX(0);
@@ -158,9 +172,18 @@
         font-weight: 500;
         text-transform: uppercase;
         letter-spacing: 4px;
-        color: #c9a227;
+        color: var(--accent-color);
         opacity: 0;
         animation: fadeIn 0.6s ease-out 1.2s forwards;
+      }
+
+      body.rtl .category-tag {
+        font-family: "Noto Sans Arabic", "Inter", sans-serif;
+        letter-spacing: 0;
+      }
+
+      body.rtl .quote-title {
+        letter-spacing: 0;
       }
 
       /* Footer area */
@@ -173,9 +196,14 @@
         justify-content: space-between;
         align-items: center;
         padding-top: 30px;
-        border-top: 1px solid rgba(201, 162, 39, 0.3);
+        border-top: 1px solid color-mix(in srgb, var(--accent-color) 30%, transparent);
         opacity: 0;
         animation: fadeIn 0.6s ease-out 4s forwards;
+      }
+
+      body.rtl .footer {
+        direction: ltr;
+        flex-direction: row-reverse;
       }
 
       .source {
@@ -253,14 +281,18 @@
 
       async function renderContent(articleData) {
         SC.hideLoading();
-        SC.insertLogo("logo", "#c9a227");
+        // This template uses gold accent, but respects site-specific colors for Arabic
+        if (articleData.isRTL) {
+          SC.applyAccentColors(articleData);
+        }
+        SC.insertLogo("logo", articleData.isRTL ? SC.getAccentColor(articleData) : "#c9a227");
         SC.setStatusBadge("statusBadge", articleData);
         SC.setText("category", articleData.category);
         SC.setText("title", articleData.title);
         SC.setText("excerpt", articleData.excerpt);
         SC.setText("source", articleData.source);
-        SC.setDate("date", articleData.date);
-        SC.setImageCredit("imageCredit", articleData.imageCredit);
+        SC.setDate("date", articleData.date, articleData.locale);
+        SC.setImageCredit("imageCredit", articleData.imageCredit, articleData.isRTL);
 
         if (articleData.imageUrl) {
           const bgImage = document.getElementById("bgImage");

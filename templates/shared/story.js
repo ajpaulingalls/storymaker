@@ -3,6 +3,29 @@
  * Handles GraphQL data fetching, rendering, and animations
  */
 
+// Site configuration
+const SITE_CONFIG = {
+  aje: {
+    domain: "www.aljazeera.com",
+    isRTL: false,
+    locale: "en-US",
+    accentColor: "#fa9000",
+    accentColorAlt: "#e76f51",
+  },
+  aja: {
+    domain: "www.aljazeera.net",
+    isRTL: true,
+    locale: "ar-SA",
+    accentColor: "#32a2ef",
+    accentColorAlt: "#1a7cc7",
+  },
+};
+
+// Get site config (defaults to aje)
+function getSiteConfig(site) {
+  return SITE_CONFIG[site] || SITE_CONFIG.aje;
+}
+
 // Get URL parameters
 function getParams() {
   const params = new URLSearchParams(window.location.search);
@@ -15,6 +38,8 @@ function getParams() {
 
 // Fetch article data from GraphQL endpoint
 async function fetchArticleData(site, postType, postSlug) {
+  const config = getSiteConfig(site);
+  
   // Build the variables object
   const variables = {
     name: postSlug,
@@ -30,7 +55,7 @@ async function fetchArticleData(site, postType, postSlug) {
     "extensions": "{}"
   });
   
-  const url = `https://www.aljazeera.com/graphql?${params.toString()}`;
+  const url = `https://${config.domain}/graphql?${params.toString()}`;
   console.log("StoryMaker: Fetching from URL:", url);
 
   try {
@@ -65,24 +90,27 @@ async function fetchArticleData(site, postType, postSlug) {
 }
 
 // Build full image URL from relative path
-function getFullImageUrl(sourceUrl) {
+function getFullImageUrl(sourceUrl, site) {
   if (!sourceUrl) return null;
   if (sourceUrl.startsWith('http')) return sourceUrl;
-  return `https://www.aljazeera.com${sourceUrl}`;
+  const config = getSiteConfig(site);
+  return `https://${config.domain}${sourceUrl}`;
 }
 
 // Extract useful article data for templates
-function extractArticleData(article) {
+function extractArticleData(article, site) {
+  const config = getSiteConfig(site);
+  
   // Get the best image URL (prefer 16:9 for video format)
   let imageUrl = null;
   if (article.featuredImage?.sourceUrl) {
-    imageUrl = getFullImageUrl(article.featuredImage.sourceUrl);
+    imageUrl = getFullImageUrl(article.featuredImage.sourceUrl, site);
   }
   // Try to get a sized version optimized for our viewport
   if (article.socialMediaImage?.sizes) {
     const size16x9 = article.socialMediaImage.sizes.find(s => s.crop === 'arc-image-16-9-1920');
     if (size16x9) {
-      imageUrl = getFullImageUrl(size16x9.url);
+      imageUrl = getFullImageUrl(size16x9.url, site);
     }
   }
 
@@ -96,17 +124,23 @@ function extractArticleData(article) {
     category: article.primaryCategoryTermName || '',
     location: article.primaryWhereTermName || '',
     date: article.date ? new Date(article.date) : null,
-    source: article.source?.[0]?.name || article.writeInAuthor || 'Al Jazeera',
+    source: article.source?.[0]?.name || article.writeInAuthor || (config.isRTL ? 'الجزيرة' : 'Al Jazeera'),
     isBreaking: article.isBreaking || false,
     isLive: article.isLive || false,
     isDeveloping: article.isDeveloping || false,
+    // Site-specific data
+    site: site,
+    isRTL: config.isRTL,
+    locale: config.locale,
+    accentColor: config.accentColor,
+    accentColorAlt: config.accentColorAlt,
   };
 }
 
 // Format date for display
-function formatDate(date) {
+function formatDate(date, locale = 'en-US') {
   if (!date) return '';
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString(locale, {
     month: 'long',
     day: 'numeric',
     year: 'numeric'
@@ -143,21 +177,42 @@ async function initStory(options = {}) {
   let hasSignaledReady = false;
 
   try {
-    const { site, postType, postSlug } = getParams();
-
-    console.log("StoryMaker: Starting with params:", { site, postType, postSlug });
-
-    if (!site || !postType || !postSlug) {
-      throw new Error("Missing required URL parameters: site, postType, postSlug");
-    }
-
-    // Fetch article data
-    console.log("StoryMaker: Fetching article data...");
-    const article = await fetchArticleData(site, postType, postSlug);
+    let articleData;
     
-    // Extract and format the data
-    const articleData = extractArticleData(article);
-    console.log("StoryMaker: Article data extracted:", articleData.title);
+    // Check for debug mode with injected data
+    if (window.DEBUG_ARTICLE_DATA) {
+      console.log("StoryMaker: Debug mode - using injected article data");
+      articleData = window.DEBUG_ARTICLE_DATA;
+      // Convert date string back to Date object if needed
+      if (articleData.date && !(articleData.date instanceof Date)) {
+        articleData.date = new Date(articleData.date);
+      }
+    } else {
+      // Normal mode - fetch from API
+      const { site, postType, postSlug } = getParams();
+
+      console.log("StoryMaker: Starting with params:", { site, postType, postSlug });
+
+      if (!site || !postType || !postSlug) {
+        throw new Error("Missing required URL parameters: site, postType, postSlug");
+      }
+
+      // Fetch article data
+      console.log("StoryMaker: Fetching article data...");
+      const article = await fetchArticleData(site, postType, postSlug);
+      
+      // Extract and format the data
+      articleData = extractArticleData(article, site);
+    }
+    
+    console.log("StoryMaker: Article data:", articleData.title);
+
+    // Set RTL mode if needed
+    if (articleData.isRTL) {
+      document.documentElement.setAttribute("dir", "rtl");
+      document.documentElement.setAttribute("lang", "ar");
+      document.body.classList.add("rtl");
+    }
 
     // Render content
     console.log("StoryMaker: Rendering content...");
@@ -222,10 +277,12 @@ async function initStory(options = {}) {
 window.StoryMaker = {
   initStory,
   getParams,
+  getSiteConfig,
   fetchArticleData,
   extractArticleData,
   getFullImageUrl,
   formatDate,
   defaultRenderContent,
   defaultAnimateContent,
+  SITE_CONFIG,
 };

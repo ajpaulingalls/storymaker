@@ -24,6 +24,50 @@ body:not(.animations-started) * {
 }
 
 /* ========================================
+   RTL Support
+   ======================================== */
+
+html[dir="rtl"] body {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Flip horizontal animations for RTL */
+body.rtl .slide-right,
+body.rtl [class*="slideRight"] {
+  transform: translateX(30px);
+}
+
+/* Flip transform origins for RTL */
+body.rtl .divider,
+body.rtl [class*="expandLine"],
+body.rtl [class*="accent"] {
+  transform-origin: right;
+}
+
+/* Flip flex layouts for RTL */
+body.rtl .top-bar,
+body.rtl .footer,
+body.rtl .meta-row,
+body.rtl .footer-area {
+  flex-direction: row-reverse;
+}
+
+/* Adjust text alignment for RTL */
+body.rtl .tags,
+body.rtl .tags-row {
+  justify-content: flex-end;
+}
+
+/* Flip border positions for RTL */
+body.rtl .excerpt[style*="border-left"] {
+  border-left: none;
+  border-right: 4px solid currentColor;
+  padding-left: 0;
+  padding-right: 30px;
+}
+
+/* ========================================
    Loading State
    ======================================== */
 

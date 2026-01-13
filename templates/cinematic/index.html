@@ -6,14 +6,28 @@
     <title>Story</title>
     <link rel="stylesheet" href="/shared/base.css" />
     <style>
-      @import url("https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Crimson+Pro:wght@300;400;500&display=swap");
+      @import url("https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Crimson+Pro:wght@300;400;500&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap");
+
+      :root {
+        --accent-color: #e50914;
+        --accent-color-alt: #b0070f;
+      }
 
       body {
         background: #000;
       }
 
+      body.rtl {
+        font-family: "Noto Sans Arabic", "Crimson Pro", serif;
+      }
+
+      body.rtl .title,
+      body.rtl .category {
+        font-family: "Noto Sans Arabic", "Oswald", sans-serif;
+      }
+
       .loading-spinner {
-        border-top-color: #e50914;
+        border-top-color: var(--accent-color);
       }
 
       .loading-text {
@@ -92,6 +106,11 @@
         z-index: 20;
       }
 
+      body.rtl .content {
+        direction: ltr;
+        text-align: right;
+      }
+
       /* Category with red accent */
       .category-line {
         display: flex;
@@ -106,7 +125,7 @@
       .category-accent {
         width: 50px;
         height: 4px;
-        background: #e50914;
+        background: var(--accent-color);
       }
 
       .category {
@@ -115,7 +134,22 @@
         font-weight: 500;
         text-transform: uppercase;
         letter-spacing: 4px;
-        color: #e50914;
+        color: var(--accent-color);
+      }
+
+      body.rtl .category {
+        letter-spacing: 0;
+      }
+
+      body.rtl .category-line {
+        direction: ltr;
+        flex-direction: row-reverse;
+        margin-left: auto;
+        transform: translateX(30px);
+      }
+
+      body.rtl .title {
+        letter-spacing: 0;
       }
 
       /* Main title - dramatic large text */
@@ -156,6 +190,11 @@
         justify-content: space-between;
         align-items: center;
         z-index: 20;
+        direction: ltr; /* Isolate from RTL to control layout explicitly */
+      }
+
+      body.rtl .top-bar {
+        flex-direction: row-reverse; /* Swap logo and meta-info for RTL */
       }
 
       .logo-area {
@@ -172,6 +211,10 @@
         text-align: right;
         opacity: 0;
         animation: fadeIn 0.8s ease-out 1.2s forwards;
+      }
+
+      body.rtl .meta-info {
+        text-align: left;
       }
 
       .location {
@@ -194,11 +237,20 @@
       .status-badge {
         position: absolute;
         top: 70px;
-        left: 80px;
         z-index: 30;
         font-family: "Oswald", sans-serif;
         font-size: 20px;
         letter-spacing: 3px;
+      }
+
+      /* Use logical properties for RTL-aware positioning */
+      html:not([dir="rtl"]) .status-badge {
+        left: 80px;
+      }
+
+      html[dir="rtl"] .status-badge {
+        right: 80px;
+        letter-spacing: 0;
       }
 
       /* Source in bottom letterbox */
@@ -281,15 +333,19 @@
 
       async function renderContent(articleData) {
         SC.hideLoading();
-        SC.insertLogo("logo", "#e50914");
+        // This template uses red accent, but respects site-specific colors for Arabic
+        if (articleData.isRTL) {
+          SC.applyAccentColors(articleData);
+        }
+        SC.insertLogo("logo", articleData.isRTL ? SC.getAccentColor(articleData) : "#e50914");
         SC.setStatusBadge("statusBadge", articleData);
         SC.setText("category", articleData.category);
         SC.setText("location", articleData.location);
         SC.setText("title", articleData.title);
         SC.setText("excerpt", articleData.excerpt);
         SC.setText("source", articleData.source);
-        SC.setDate("date", articleData.date);
-        SC.setImageCredit("imageCredit", articleData.imageCredit);
+        SC.setDate("date", articleData.date, articleData.locale);
+        SC.setImageCredit("imageCredit", articleData.imageCredit, articleData.isRTL);
 
         if (articleData.imageUrl) {
           const bgImage = document.getElementById("bgImage");

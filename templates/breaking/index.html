@@ -6,14 +6,32 @@
     <title>Story</title>
     <link rel="stylesheet" href="/shared/base.css" />
     <style>
-      @import url("https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap");
+      @import url("https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap");
+
+      :root {
+        --accent-color: #ff0033;
+        --accent-color-alt: #cc0029;
+      }
 
       body {
         background: #0a0a0a;
       }
 
+      body.rtl {
+        font-family: "Noto Sans Arabic", "Barlow", sans-serif;
+      }
+
+      body.rtl .title,
+      body.rtl .breaking-label {
+        font-family: "Noto Sans Arabic", "Archivo Black", sans-serif;
+      }
+
+      body.rtl .location {
+        font-family: "Noto Sans Arabic", "Barlow Condensed", sans-serif;
+      }
+
       .loading-spinner {
-        border-top-color: #ff0033;
+        border-top-color: var(--accent-color);
       }
 
       .loading-text {
@@ -66,7 +84,7 @@
         left: 0;
         right: 0;
         height: 12px;
-        background: #ff0033;
+        background: var(--accent-color);
         transform: scaleX(0);
         transform-origin: left;
         animation: expandLine 0.4s ease-out 0.2s forwards;
@@ -78,10 +96,18 @@
         left: 0;
         right: 0;
         height: 12px;
-        background: #ff0033;
+        background: var(--accent-color);
         transform: scaleX(0);
         transform-origin: right;
         animation: expandLine 0.4s ease-out 0.2s forwards;
+      }
+
+      body.rtl .accent-bar-top {
+        transform-origin: right;
+      }
+
+      body.rtl .accent-bar-bottom {
+        transform-origin: left;
       }
 
       /* BREAKING banner */
@@ -90,7 +116,7 @@
         top: 80px;
         left: 0;
         right: 0;
-        background: #ff0033;
+        background: var(--accent-color);
         padding: 25px 80px;
         display: flex;
         align-items: center;
@@ -98,6 +124,15 @@
         opacity: 0;
         transform: translateY(-100%);
         animation: slideDown 0.5s ease-out 0.4s forwards;
+      }
+
+      body.rtl .breaking-banner {
+        direction: ltr; /* Isolate from body RTL direction */
+        flex-direction: row-reverse; /* Label on right, line on left */
+      }
+
+      body.rtl .breaking-label {
+        letter-spacing: 0;
       }
 
       .breaking-label {
@@ -160,7 +195,7 @@
       .location-dot {
         width: 12px;
         height: 12px;
-        background: #ff0033;
+        background: var(--accent-color);
         border-radius: 50%;
         animation: blink 1s ease-in-out 1.5s infinite;
       }
@@ -180,7 +215,19 @@
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 4px;
-        color: #ff0033;
+        color: var(--accent-color);
+      }
+
+      body.rtl .location {
+        letter-spacing: 0;
+      }
+
+      body.rtl .location-tag {
+        flex-direction: row-reverse;
+      }
+
+      body.rtl .title {
+        text-transform: none;
       }
 
       /* Title - very bold */
@@ -206,10 +253,17 @@
         max-width: 850px;
         margin-bottom: 50px;
         padding-left: 30px;
-        border-left: 4px solid #ff0033;
+        border-left: 4px solid var(--accent-color);
         opacity: 0;
         transform: translateY(30px);
         animation: slideUp 0.5s ease-out 1.8s forwards;
+      }
+
+      body.rtl .excerpt {
+        padding-left: 0;
+        padding-right: 30px;
+        border-left: none;
+        border-right: 4px solid var(--accent-color);
       }
 
       /* Footer */
@@ -218,7 +272,7 @@
         justify-content: space-between;
         align-items: center;
         padding-top: 30px;
-        border-top: 2px solid rgba(255, 0, 51, 0.3);
+        border-top: 2px solid color-mix(in srgb, var(--accent-color) 30%, transparent);
         opacity: 0;
         animation: fadeIn 0.5s ease-out 2.3s forwards;
       }
@@ -241,7 +295,7 @@
       .live-dot {
         width: 14px;
         height: 14px;
-        background: #ff0033;
+        background: var(--accent-color);
         border-radius: 50%;
         animation: blink 1s ease-in-out infinite;
       }
@@ -263,6 +317,11 @@
         color: rgba(255, 255, 255, 0.4);
         opacity: 0;
         animation: fadeIn 0.5s ease-out 3s forwards;
+      }
+
+      body.rtl .image-credit {
+        right: auto;
+        left: 80px;
       }
 
       /* Hide default status badge - we use the breaking banner */
@@ -320,36 +379,39 @@
 
       async function renderContent(articleData) {
         SC.hideLoading();
-        SC.insertLogo("logo", "#ff0033");
+        // This template keeps red for highlights, but uses site accent color for logo
+        // aje (English): orange logo, aja (Arabic): blue logo
+        SC.insertLogo("logo", SC.getAccentColor(articleData));
         SC.setText("location", articleData.location || articleData.category);
         SC.setText("title", articleData.title);
         SC.setText("excerpt", articleData.excerpt);
         SC.setText("source", articleData.source);
-        SC.setImageCredit("imageCredit", articleData.imageCredit);
+        SC.setImageCredit("imageCredit", articleData.imageCredit, articleData.isRTL);
 
         // Set breaking label based on status
         const label = document.getElementById("breakingLabel");
+        const isArabic = articleData.isRTL;
         if (articleData.isLive) {
-          label.textContent = "LIVE";
+          label.textContent = isArabic ? "مباشر" : "LIVE";
         } else if (articleData.isDeveloping) {
-          label.textContent = "DEVELOPING";
+          label.textContent = isArabic ? "متابعة" : "DEVELOPING";
         } else {
-          label.textContent = "BREAKING";
+          label.textContent = isArabic ? "عاجل" : "BREAKING";
         }
 
-        // Format time more urgently
+        // Format date and time in GMT
         if (articleData.date) {
-          const now = new Date();
-          const diff = now - articleData.date;
-          const mins = Math.floor(diff / 60000);
-          if (mins < 60) {
-            document.getElementById("date").textContent = `${mins} MIN AGO`;
-          } else if (mins < 1440) {
-            const hrs = Math.floor(mins / 60);
-            document.getElementById("date").textContent = `${hrs} HR${hrs > 1 ? 'S' : ''} AGO`;
-          } else {
-            SC.setDate("date", articleData.date);
-          }
+          const isAr = articleData.isRTL;
+          const options = {
+            timeZone: 'GMT',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          };
+          const formatted = articleData.date.toLocaleString(isAr ? 'ar-SA' : 'en-US', options);
+          document.getElementById("date").textContent = `${formatted} GMT`;
         }
 
         if (articleData.imageUrl) {

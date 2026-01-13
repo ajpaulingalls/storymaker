@@ -23,14 +23,16 @@ window.StoryComponents = {
     const badge = document.getElementById(elementId);
     if (!badge) return;
 
+    const isArabic = articleData.isRTL;
+
     if (articleData.isBreaking) {
-      badge.textContent = "Breaking";
+      badge.textContent = isArabic ? "عاجل" : "Breaking";
       badge.classList.add("breaking");
     } else if (articleData.isLive) {
-      badge.textContent = "Live";
+      badge.textContent = isArabic ? "مباشر" : "Live";
       badge.classList.add("live");
     } else if (articleData.isDeveloping) {
-      badge.textContent = "Developing";
+      badge.textContent = isArabic ? "متابعة" : "Developing";
       badge.classList.add("developing");
     }
   },
@@ -78,11 +80,12 @@ window.StoryComponents = {
    * Set image credit text
    * @param {string} elementId - The ID of the credit element
    * @param {string} credit - The credit text
-   * @param {string} prefix - Optional prefix (default: "Photo: ")
+   * @param {boolean} isRTL - Whether to use Arabic prefix
    */
-  setImageCredit(elementId, credit, prefix = "Photo: ") {
+  setImageCredit(elementId, credit, isRTL = false) {
     const el = document.getElementById(elementId);
     if (el && credit) {
+      const prefix = isRTL ? "تصوير: " : "Photo: ";
       el.textContent = prefix + credit;
     }
   },
@@ -91,11 +94,12 @@ window.StoryComponents = {
    * Set formatted date
    * @param {string} elementId - The ID of the date element
    * @param {Date} date - The date object
+   * @param {string} locale - Locale for date formatting (default: 'en-US')
    */
-  setDate(elementId, date) {
+  setDate(elementId, date, locale = 'en-US') {
     const el = document.getElementById(elementId);
     if (el && date) {
-      el.textContent = window.StoryMaker.formatDate(date);
+      el.textContent = window.StoryMaker.formatDate(date, locale);
     }
   },
 
@@ -169,5 +173,26 @@ window.StoryComponents = {
     if (container) {
       container.innerHTML = this.getLogoSVG(accentColor);
     }
+  },
+
+  /**
+   * Get the accent color based on article data
+   * @param {object} articleData - The article data with accentColor
+   * @param {string} fallback - Fallback color if not in articleData
+   * @returns {string} The accent color
+   */
+  getAccentColor(articleData, fallback = "#fa9000") {
+    return articleData?.accentColor || fallback;
+  },
+
+  /**
+   * Apply site-specific CSS variables to the document
+   * @param {object} articleData - The article data with site info
+   */
+  applyAccentColors(articleData) {
+    if (!articleData) return;
+    const root = document.documentElement;
+    root.style.setProperty("--accent-color", articleData.accentColor || "#fa9000");
+    root.style.setProperty("--accent-color-alt", articleData.accentColorAlt || "#e76f51");
   }
 };

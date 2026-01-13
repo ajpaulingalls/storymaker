@@ -6,19 +6,39 @@
     <title>Story</title>
     <link rel="stylesheet" href="/shared/base.css" />
     <style>
-      @import url("https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700&family=Roboto:wght@300;400;500;700&display=swap");
+      @import url("https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700&family=Roboto:wght@300;400;500;700&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap");
+
+      :root {
+        --accent-color: #fa9000;
+        --accent-color-alt: #e76f51;
+      }
 
       body {
         background: #0a0a0a;
       }
 
+      /* Arabic font support */
+      body.rtl {
+        font-family: "Noto Sans Arabic", "Roboto", sans-serif;
+      }
+
+      body.rtl .title,
+      body.rtl .excerpt {
+        font-family: "Noto Sans Arabic", "Noto Serif", serif;
+      }
+
       /* Template-specific loading spinner color */
       .loading-spinner {
-        border-top-color: #fa9f42;
+        border-top-color: var(--accent-color);
       }
 
       .loading-text {
         font-family: "Roboto", sans-serif;
+      }
+
+      /* Background Image Container - isolate from RTL direction */
+      .bg-image-container {
+        direction: ltr; /* Prevent RTL from affecting image positioning */
       }
 
       /* Background Image - Horizontal Pan Effect */
@@ -40,6 +60,11 @@
         100% { transform: translateX(var(--pan-distance)); }
       }
 
+      @keyframes panRightToLeft {
+        0% { transform: translateX(var(--pan-distance)); }
+        100% { transform: translateX(0); }
+      }
+
       /* Top bar with logo and status */
       .top-bar {
         position: absolute;
@@ -49,6 +74,11 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+      }
+
+      body.rtl .top-bar {
+        direction: ltr;
+        flex-direction: row-reverse;
       }
 
       .top-bar svg {
@@ -72,6 +102,11 @@
         animation: slideRight 0.5s ease-out 1s forwards;
       }
 
+      body.rtl .tags {
+        margin-left: auto;
+        transform: translateX(30px);
+      }
+
       .tag {
         font-family: "Roboto", sans-serif;
         font-size: 26px;
@@ -79,9 +114,14 @@
         text-transform: uppercase;
         letter-spacing: 3px;
         padding: 10px 20px;
-        background: rgba(250, 159, 66, 0.9);
+        background: var(--accent-color);
         color: #0a0a0a;
         border-radius: 4px;
+      }
+
+      body.rtl .tag {
+        font-family: "Noto Sans Arabic", "Roboto", sans-serif;
+        letter-spacing: 0;
       }
 
       /* Main content container */
@@ -113,12 +153,16 @@
       .divider {
         width: 100px;
         height: 5px;
-        background: linear-gradient(90deg, #fa9f42, #e76f51);
+        background: linear-gradient(90deg, var(--accent-color), var(--accent-color-alt));
         border-radius: 3px;
         opacity: 0;
         transform: scaleX(0);
         transform-origin: left;
         animation: expandLine 0.5s ease-out 3s forwards;
+      }
+
+      body.rtl .divider {
+        transform-origin: right;
       }
 
       /* Excerpt */
@@ -144,6 +188,11 @@
         border-top: 1px solid rgba(255, 255, 255, 0.2);
         opacity: 0;
         animation: fadeIn 0.6s ease-out 5s forwards;
+      }
+
+      body.rtl .footer {
+        direction: ltr;
+        flex-direction: row-reverse;
       }
 
       .source,
@@ -210,14 +259,15 @@
 
       async function renderContent(articleData) {
         SC.hideLoading();
-        SC.insertLogo("logo", "#fa9000");
+        SC.applyAccentColors(articleData);
+        SC.insertLogo("logo", SC.getAccentColor(articleData));
         SC.setStatusBadge("statusBadge", articleData);
         SC.renderTags("tags", SC.getBasicTags(articleData));
         SC.setText("title", articleData.title);
         SC.setText("excerpt", articleData.excerpt);
         SC.setText("source", articleData.source);
-        SC.setDate("date", articleData.date);
-        SC.setImageCredit("imageCredit", articleData.imageCredit);
+        SC.setDate("date", articleData.date, articleData.locale);
+        SC.setImageCredit("imageCredit", articleData.imageCredit, articleData.isRTL);
 
         // Set background image and setup pan animation
         if (articleData.imageUrl) {
@@ -229,8 +279,14 @@
               const viewportWidth = 1080;
               const panDistance = -(bgImage.offsetWidth - viewportWidth);
               bgImage.style.setProperty("--pan-distance", `${panDistance}px`);
+              // For RTL (Arabic), pan from right to left - start positioned at right side
+              const panAnimation = articleData.isRTL ? "panRightToLeft" : "panLeftToRight";
+              if (articleData.isRTL) {
+                // Set initial position to show right side of image before animation starts
+                bgImage.style.transform = `translateX(${panDistance}px)`;
+              }
               setTimeout(() => {
-                bgImage.style.animation = "fadeInImage 0.5s ease-out forwards, panLeftToRight 11s linear forwards";
+                bgImage.style.animation = `fadeInImage 0.5s ease-out forwards, ${panAnimation} 11s linear forwards`;
               }, 100);
               resolve();
             };
