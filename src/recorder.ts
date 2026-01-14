@@ -36,15 +36,18 @@ export async function recordStory(
 
   try {
     // Launch browser
+    // Use system Chromium if PUPPETEER_EXECUTABLE_PATH is set (for Docker deployment)
+    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
     browser = await puppeteer.launch({
-//      headless: true,
+      executablePath,
       args: [
         `--window-size=${width},${height}`,
         "--no-sandbox",
         "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage", // Important for Docker - use /tmp instead of /dev/shm
       ],
     });
-    console.log("Browser launched");
+    console.log(`Browser launched${executablePath ? ` (using ${executablePath})` : ""}`);
 
     page = await browser.newPage();
 

@@ -1,0 +1,36 @@
+# Dependencies
+node_modules
+
+# Generated videos (temporary files)
+videos/*.mp4
+videos/*.webm
+
+# Git
+.git
+.gitignore
+
+# IDE
+.cursor
+.vscode
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+dist
+*.log
+
+# Documentation
+README.md
+*.md
+
+# Local development
+.env
+.env.local
+.env.*.local
+
+# Azure deployment script (not needed in container)
+azure-deploy.sh

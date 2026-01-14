@@ -1,0 +1,210 @@
+name: Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      destroy:
+        description: 'Destroy infrastructure instead of creating it'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP || 'storymaker-rg' }}
+  LOCATION: ${{ vars.AZURE_LOCATION || 'eastus' }}
+  APP_NAME: ${{ vars.APP_NAME || 'storymaker' }}
+
+jobs:
+  infrastructure:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set Resource Names
+        id: names
+        run: |
+          # Create deterministic, Azure-compliant resource names
+          # ACR: alphanumeric only, 5-50 chars
+          # Storage: lowercase alphanumeric only, 3-24 chars
+          
+          APP_NAME_CLEAN=$(echo "${{ env.APP_NAME }}" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]')
+          
+          echo "acr_name=${APP_NAME_CLEAN}acr" >> $GITHUB_OUTPUT
+          echo "storage_account=${APP_NAME_CLEAN}stor" >> $GITHUB_OUTPUT
+          echo "storage_container=videos" >> $GITHUB_OUTPUT
+          echo "app_service_plan=${{ env.APP_NAME }}-plan" >> $GITHUB_OUTPUT
+          echo "web_app_name=${{ env.APP_NAME }}-app" >> $GITHUB_OUTPUT
+
+      - name: Destroy Infrastructure
+        if: ${{ inputs.destroy == true }}
+        run: |
+          echo "Destroying resource group: ${{ env.RESOURCE_GROUP }}"
+          az group delete \
+            --name "${{ env.RESOURCE_GROUP }}" \
+            --yes \
+            --no-wait || true
+          echo "Resource group deletion initiated"
+
+      - name: Create Resource Group
+        if: ${{ inputs.destroy != true }}
+        run: |
+          echo "Creating resource group: ${{ env.RESOURCE_GROUP }}"
+          az group create \
+            --name "${{ env.RESOURCE_GROUP }}" \
+            --location "${{ env.LOCATION }}" \
+            --output none
+          echo "Resource group created"
+
+      - name: Create Container Registry
+        if: ${{ inputs.destroy != true }}
+        run: |
+          echo "Creating container registry: ${{ steps.names.outputs.acr_name }}"
+          az acr create \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "${{ steps.names.outputs.acr_name }}" \
+            --sku Basic \
+            --admin-enabled true \
+            --output none
+          echo "Container registry created"
+
+      - name: Create Storage Account
+        if: ${{ inputs.destroy != true }}
+        run: |
+          echo "Creating storage account: ${{ steps.names.outputs.storage_account }}"
+          az storage account create \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "${{ steps.names.outputs.storage_account }}" \
+            --location "${{ env.LOCATION }}" \
+            --sku Standard_LRS \
+            --kind StorageV2 \
+            --allow-blob-public-access true \
+            --output none
+          echo "Storage account created"
+
+      - name: Create Blob Container
+        if: ${{ inputs.destroy != true }}
+        run: |
+          echo "Creating blob container: ${{ steps.names.outputs.storage_container }}"
+          az storage container create \
+            --name "${{ steps.names.outputs.storage_container }}" \
+            --account-name "${{ steps.names.outputs.storage_account }}" \
+            --public-access blob \
+            --output none
+          echo "Blob container created"
+
+      - name: Create App Service Plan
+        if: ${{ inputs.destroy != true }}
+        run: |
+          echo "Creating app service plan: ${{ steps.names.outputs.app_service_plan }}"
+          az appservice plan create \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "${{ steps.names.outputs.app_service_plan }}" \
+            --is-linux \
+            --sku B2 \
+            --output none
+          echo "App service plan created (B2 tier)"
+
+      - name: Create Web App
+        if: ${{ inputs.destroy != true }}
+        run: |
+          echo "Creating web app: ${{ steps.names.outputs.web_app_name }}"
+          
+          # Get ACR login server
+          ACR_LOGIN_SERVER=$(az acr show \
+            --name "${{ steps.names.outputs.acr_name }}" \
+            --query loginServer -o tsv)
+          
+          # Create web app with placeholder image (will be updated on first deploy)
+          az webapp create \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --plan "${{ steps.names.outputs.app_service_plan }}" \
+            --name "${{ steps.names.outputs.web_app_name }}" \
+            --deployment-container-image-name "mcr.microsoft.com/appsvc/staticsite:latest" \
+            --output none
+          echo "Web app created"
+
+      - name: Configure Web App
+        if: ${{ inputs.destroy != true }}
+        run: |
+          echo "Configuring web app..."
+          
+          # Get ACR credentials
+          ACR_LOGIN_SERVER=$(az acr show \
+            --name "${{ steps.names.outputs.acr_name }}" \
+            --query loginServer -o tsv)
+          ACR_USERNAME=$(az acr credential show \
+            --name "${{ steps.names.outputs.acr_name }}" \
+            --query username -o tsv)
+          ACR_PASSWORD=$(az acr credential show \
+            --name "${{ steps.names.outputs.acr_name }}" \
+            --query "passwords[0].value" -o tsv)
+          
+          # Get storage connection string
+          STORAGE_CONNECTION_STRING=$(az storage account show-connection-string \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "${{ steps.names.outputs.storage_account }}" \
+            --query connectionString -o tsv)
+          
+          # Configure container registry
+          az webapp config container set \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "${{ steps.names.outputs.web_app_name }}" \
+            --docker-registry-server-url "https://$ACR_LOGIN_SERVER" \
+            --docker-registry-server-user "$ACR_USERNAME" \
+            --docker-registry-server-password "$ACR_PASSWORD" \
+            --output none
+          
+          # Configure app settings
+          az webapp config appsettings set \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "${{ steps.names.outputs.web_app_name }}" \
+            --settings \
+              WEBSITES_PORT=8080 \
+              AZURE_STORAGE_CONNECTION_STRING="$STORAGE_CONNECTION_STRING" \
+              AZURE_STORAGE_CONTAINER="${{ steps.names.outputs.storage_container }}" \
+              PUPPETEER_EXECUTABLE_PATH="/usr/bin/chromium" \
+            --output none
+          
+          # Enable container logging
+          az webapp log config \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "${{ steps.names.outputs.web_app_name }}" \
+            --docker-container-logging filesystem \
+            --output none
+          
+          # Configure health check
+          az webapp config set \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "${{ steps.names.outputs.web_app_name }}" \
+            --generic-configurations '{"healthCheckPath": "/health"}' \
+            --output none
+          
+          echo "Web app configured"
+
+      - name: Output Deployment Info
+        if: ${{ inputs.destroy != true }}
+        run: |
+          ACR_LOGIN_SERVER=$(az acr show \
+            --name "${{ steps.names.outputs.acr_name }}" \
+            --query loginServer -o tsv)
+          
+          echo ""
+          echo "================================================"
+          echo "Infrastructure Created Successfully!"
+          echo "================================================"
+          echo ""
+          echo "Web App URL:     https://${{ steps.names.outputs.web_app_name }}.azurewebsites.net"
+          echo "Health Check:    https://${{ steps.names.outputs.web_app_name }}.azurewebsites.net/health"
+          echo "API Endpoint:    https://${{ steps.names.outputs.web_app_name }}.azurewebsites.net/api/create-video"
+          echo ""
+          echo "Resource Group:  ${{ env.RESOURCE_GROUP }}"
+          echo "ACR:             $ACR_LOGIN_SERVER"
+          echo "Storage:         ${{ steps.names.outputs.storage_account }}"
+          echo ""
+          echo "Next step: Push to main branch to trigger deployment"
+          echo "Or run the Deploy workflow manually"
+          echo ""
