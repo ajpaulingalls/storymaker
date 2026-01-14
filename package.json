@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "debug": "bun run src/debug-server.ts",
-    "start": "bun run index.ts"
+    "start": "bun run index.ts",
+    "serve": "bun run src/web-service.ts"
   },
   "devDependencies": {
     "@types/bun": "latest"

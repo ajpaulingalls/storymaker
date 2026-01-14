@@ -18,6 +18,84 @@ export interface TemplateServerOptions {
   postSlug: string;
 }
 
+/**
+ * Build a template URL with query parameters
+ */
+export function buildTemplateUrl(port: number, options: TemplateServerOptions): string {
+  const url = new URL(`http://localhost:${port}/${options.template}/`);
+  url.searchParams.set("site", options.site);
+  url.searchParams.set("postType", options.postType);
+  url.searchParams.set("postSlug", options.postSlug);
+  return url.toString();
+}
+
+/**
+ * Start a persistent template server that handles dynamic template selection via URL path.
+ * Templates are accessed via /{template-name}/ path.
+ * @param port - Port to listen on (default: 3456 for internal use)
+ */
+export async function startPersistentServer(port: number = 3456): Promise<Server> {
+  const templatesDir = join(import.meta.dir, "..", "templates");
+  console.log(`[Template Server] Templates directory: ${templatesDir}`);
+
+  const server = Bun.serve({
+    port,
+    async fetch(req) {
+      const url = new URL(req.url);
+      const pathname = url.pathname;
+
+      console.log(`[Template Server] Request: ${pathname}`);
+
+      // Serve shared files first (e.g., /shared/base.css)
+      if (pathname.startsWith("/shared/")) {
+        const relativePath = pathname.slice(1); // Remove leading /
+        const filePath = join(templatesDir, relativePath);
+        const file = Bun.file(filePath);
+
+        if (await file.exists()) {
+          const ext = extname(pathname);
+          const contentType = MIME_TYPES[ext] || "application/octet-stream";
+          return new Response(file, {
+            headers: { "Content-Type": contentType },
+          });
+        }
+        return new Response("File not found", { status: 404 });
+      }
+
+      // Extract template from path: /{template-name}/...
+      const pathParts = pathname.slice(1).split("/");
+      const template = pathParts[0];
+      
+      if (!template) {
+        return new Response("Template name required in path", { status: 400 });
+      }
+
+      // Determine what file to serve
+      const relativePath = pathParts.slice(1).join("/") || "index.html";
+      const filePath = join(templatesDir, template, relativePath);
+      const file = Bun.file(filePath);
+
+      if (await file.exists()) {
+        const ext = extname(filePath);
+        const contentType = MIME_TYPES[ext] || "application/octet-stream";
+        return new Response(file, {
+          headers: { "Content-Type": contentType },
+        });
+      }
+
+      console.log(`[Template Server] File not found: ${filePath}`);
+      return new Response("Not found", { status: 404 });
+    },
+  });
+
+  console.log(`[Template Server] Running on port ${server.port}`);
+  return server;
+}
+
+/**
+ * Start a server configured for a specific template (CLI mode).
+ * Template is served at the root path /.
+ */
 export async function startServer(options: TemplateServerOptions): Promise<{
   server: Server;
   url: string;
