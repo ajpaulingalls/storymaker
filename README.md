@@ -213,6 +213,126 @@ Opens at http://localhost:3333 with a UI to:
 - **Format**: MP4 (H.264 codec)
 - **Intermediate**: WebM (automatically cleaned up after conversion)
 
+## Azure Deployment
+
+This application can be deployed to Azure App Service using GitHub Actions for CI/CD.
+
+### Prerequisites
+
+- Azure subscription
+- GitHub repository
+- Azure CLI installed locally (for one-time setup)
+
+### One-Time Setup
+
+#### 1. Create Azure Service Principal
+
+Run locally to create credentials for GitHub Actions:
+
+```bash
+# Login to Azure
+az login
+
+# Get your subscription ID
+az account show --query id -o tsv
+
+# Create service principal with Contributor role
+az ad sp create-for-rbac \
+  --name "storymaker-github-actions" \
+  --role contributor \
+  --scopes /subscriptions/{YOUR_SUBSCRIPTION_ID} \
+  --sdk-auth
+```
+
+Save the JSON output for the next step.
+
+#### 2. Configure GitHub Secrets
+
+Go to your GitHub repo > Settings > Secrets and variables > Actions
+
+**Add these secrets:**
+
+| Secret Name | Description |
+|-------------|-------------|
+| `AZURE_CREDENTIALS` | The JSON output from step 1 |
+
+**Add these variables** (Variables tab):
+
+| Variable Name | Description | Example |
+|---------------|-------------|---------|
+| `AZURE_RESOURCE_GROUP` | Resource group name | `storymaker-rg` |
+| `AZURE_LOCATION` | Azure region | `eastus` |
+| `APP_NAME` | Base name for resources | `storymaker` |
+
+### Deployment
+
+#### Initial Infrastructure Setup
+
+1. Go to Actions tab in GitHub
+2. Select "Infrastructure" workflow
+3. Click "Run workflow"
+4. Wait for completion (~5 minutes)
+
+This creates:
+- Azure Container Registry
+- Azure Storage Account (for video storage)
+- Azure App Service Plan (B2 tier)
+- Azure Web App
+
+#### Deploy Application
+
+Push to `main` branch to automatically deploy, or:
+
+1. Go to Actions tab
+2. Select "Deploy" workflow
+3. Click "Run workflow"
+
+### Architecture
+
+```
+┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│  GitHub Actions │────▶│ Azure Container  │────▶│  Azure App      │
+│  (Build & Push) │     │ Registry (ACR)   │     │  Service        │
+└─────────────────┘     └──────────────────┘     └────────┬────────┘
+                                                          │
+                                                          ▼
+                                                 ┌─────────────────┐
+                                                 │  Azure Blob     │
+                                                 │  Storage        │
+                                                 │  (Videos)       │
+                                                 └─────────────────┘
+```
+
+### Useful Commands
+
+```bash
+# View application logs
+az webapp log tail \
+  --resource-group storymaker-rg \
+  --name storymaker-app
+
+# Restart the app
+az webapp restart \
+  --resource-group storymaker-rg \
+  --name storymaker-app
+
+# Delete all resources
+az group delete --name storymaker-rg --yes
+```
+
+### Local Docker Testing
+
+```bash
+# Build the image
+docker build -t storymaker:test .
+
+# Run locally (without blob storage)
+docker run -p 8080:8080 storymaker:test
+
+# Test the API
+curl http://localhost:8080/health
+```
+
 ## License
 
 Private

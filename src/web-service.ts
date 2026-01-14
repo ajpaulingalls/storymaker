@@ -2,6 +2,11 @@ import type { Server } from "bun";
 import { join, extname } from "path";
 import { recordStory } from "./recorder";
 import { startPersistentServer, buildTemplateUrl } from "./server";
+import {
+  uploadVideo,
+  isBlobStorageEnabled,
+  ensureContainer,
+} from "./blob-storage";
 
 const MIME_TYPES: Record<string, string> = {
   ".mp4": "video/mp4",
@@ -67,10 +72,36 @@ async function handleCreateVideo(req: Request): Promise<Response> {
     });
 
     if (result.success) {
-      // Build the public URL for the video
-      const host = req.headers.get("host") || "localhost:8080";
-      const protocol = req.headers.get("x-forwarded-proto") || "http";
-      const videoUrl = `${protocol}://${host}/videos/${filename}`;
+      let videoUrl: string;
+
+      // Try to upload to Azure Blob Storage if configured
+      if (isBlobStorageEnabled()) {
+        const blobUrl = await uploadVideo(result.outputPath, filename);
+
+        if (blobUrl) {
+          // Successfully uploaded to blob storage
+          videoUrl = blobUrl;
+
+          // Delete the local temp file
+          try {
+            await Bun.$`rm ${result.outputPath}`.quiet();
+            console.log(`[API] Deleted local temp file: ${result.outputPath}`);
+          } catch {
+            console.warn(`[API] Failed to delete temp file: ${result.outputPath}`);
+          }
+        } else {
+          // Blob upload failed, fall back to local URL
+          console.warn("[API] Blob upload failed, falling back to local URL");
+          const host = req.headers.get("host") || "localhost:8080";
+          const protocol = req.headers.get("x-forwarded-proto") || "http";
+          videoUrl = `${protocol}://${host}/videos/${filename}`;
+        }
+      } else {
+        // Blob storage not configured, use local URL
+        const host = req.headers.get("host") || "localhost:8080";
+        const protocol = req.headers.get("x-forwarded-proto") || "http";
+        videoUrl = `${protocol}://${host}/videos/${filename}`;
+      }
 
       console.log(`[API] Video created: ${videoUrl}`);
 
@@ -124,6 +155,15 @@ export async function startWebService(port: number = 8080): Promise<Server> {
   // Start the internal template server first
   templateServer = await startPersistentServer();
 
+  // Initialize blob storage if configured
+  const blobEnabled = isBlobStorageEnabled();
+  if (blobEnabled) {
+    const containerReady = await ensureContainer();
+    if (!containerReady) {
+      console.warn("[Web Service] Blob storage configured but container check failed");
+    }
+  }
+
   const server = Bun.serve({
     port,
     async fetch(req) {
@@ -152,6 +192,7 @@ export async function startWebService(port: number = 8080): Promise<Server> {
       if (pathname === "/") {
         return Response.json({
           name: "StoryMaker Video Service",
+          storage: blobEnabled ? "Azure Blob Storage" : "Local filesystem",
           endpoints: {
             "POST /api/create-video": {
               description: "Create a video from a story",
@@ -161,8 +202,12 @@ export async function startWebService(port: number = 8080): Promise<Server> {
                 postType: "string (required) - Post type (e.g., 'post')",
                 template: "string (required) - Template name (e.g., 'default', 'breaking')",
               },
+              response: {
+                success: "boolean",
+                url: "string - URL to download the video (Azure Blob URL or local URL)",
+              },
             },
-            "GET /videos/{filename}": "Serve generated videos",
+            "GET /videos/{filename}": "Serve generated videos (fallback when blob storage unavailable)",
             "GET /health": "Health check endpoint",
           },
         });
@@ -174,8 +219,9 @@ export async function startWebService(port: number = 8080): Promise<Server> {
 
   console.log(`\n🎬 StoryMaker Web Service running at http://localhost:${port}`);
   console.log(`   POST /api/create-video - Create a video`);
-  console.log(`   GET /videos/{filename} - Serve videos`);
-  console.log(`   GET /health - Health check\n`);
+  console.log(`   GET /videos/{filename} - Serve videos (fallback when blob storage unavailable)`);
+  console.log(`   GET /health - Health check`);
+  console.log(`   Storage: ${blobEnabled ? "Azure Blob Storage" : "Local filesystem"}\n`);
 
   return server;
 }

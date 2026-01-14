@@ -1,0 +1,92 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP || 'storymaker-rg' }}
+  APP_NAME: ${{ vars.APP_NAME || 'storymaker' }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set Resource Names
+        id: names
+        run: |
+          # Use same naming convention as infrastructure workflow
+          APP_NAME_CLEAN=$(echo "${{ env.APP_NAME }}" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]')
+          
+          echo "acr_name=${APP_NAME_CLEAN}acr" >> $GITHUB_OUTPUT
+          echo "web_app_name=${{ env.APP_NAME }}-app" >> $GITHUB_OUTPUT
+
+      - name: Get ACR Login Server
+        id: acr
+        run: |
+          ACR_LOGIN_SERVER=$(az acr show \
+            --name "${{ steps.names.outputs.acr_name }}" \
+            --query loginServer -o tsv)
+          echo "login_server=$ACR_LOGIN_SERVER" >> $GITHUB_OUTPUT
+
+      - name: Login to ACR
+        run: |
+          az acr login --name "${{ steps.names.outputs.acr_name }}"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.acr.outputs.login_server }}/${{ env.APP_NAME }}:latest
+            ${{ steps.acr.outputs.login_server }}/${{ env.APP_NAME }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to App Service
+        run: |
+          echo "Deploying to App Service..."
+          
+          # Update the container image
+          az webapp config container set \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "${{ steps.names.outputs.web_app_name }}" \
+            --docker-custom-image-name "${{ steps.acr.outputs.login_server }}/${{ env.APP_NAME }}:${{ github.sha }}" \
+            --output none
+          
+          # Restart the app to pull the new image
+          az webapp restart \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "${{ steps.names.outputs.web_app_name }}"
+          
+          echo "Deployment complete"
+
+      - name: Output Deployment Info
+        run: |
+          echo ""
+          echo "================================================"
+          echo "Deployment Successful!"
+          echo "================================================"
+          echo ""
+          echo "Web App URL:  https://${{ steps.names.outputs.web_app_name }}.azurewebsites.net"
+          echo "Health Check: https://${{ steps.names.outputs.web_app_name }}.azurewebsites.net/health"
+          echo "API Endpoint: https://${{ steps.names.outputs.web_app_name }}.azurewebsites.net/api/create-video"
+          echo ""
+          echo "Image Tag:    ${{ github.sha }}"
+          echo "Commit:       ${{ github.event.head_commit.message }}"
+          echo ""
