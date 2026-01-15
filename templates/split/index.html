@@ -188,9 +188,19 @@
         gap: 30px;
       }
 
+      /* For AJA, swap logo and source positions */
+      .footer-left:has(.logo-aja) {
+        flex-direction: row-reverse;
+      }
+
       .logo-area svg {
         width: 160px;
         height: auto;
+      }
+
+      /* AJA logo is square - use height-based sizing */
+      .logo-area.logo-aja svg {
+        width: 70px;
       }
 
       .source {
@@ -289,7 +299,7 @@
       async function renderContent(articleData) {
         SC.hideLoading();
         SC.applyAccentColors(articleData);
-        SC.insertLogo("logo", SC.getAccentColor(articleData));
+        SC.insertLogo("logo", articleData);
         SC.setStatusBadge("statusBadge", articleData);
         SC.setText("category", articleData.category);
         SC.setText("location", articleData.location);

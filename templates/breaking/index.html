@@ -134,6 +134,7 @@
 
       body.rtl .breaking-label {
         letter-spacing: 0;
+        font-weight: 800;
       }
 
       .breaking-label {
@@ -172,6 +173,17 @@
       .logo-area svg {
         width: 280px;
         height: auto;
+      }
+
+      /* AJA logo: square, on right side, and lower due to taller Arabic text */
+      .logo-area.logo-aja {
+        left: auto;
+        right: 80px;
+        top: 260px;
+      }
+
+      .logo-area.logo-aja svg {
+        width: 110px;
       }
 
       /* Main content */
@@ -382,7 +394,7 @@
         SC.hideLoading();
         // This template keeps red for highlights, but uses site accent color for logo
         // aje (English): orange logo, aja (Arabic): blue logo
-        SC.insertLogo("logo", SC.getAccentColor(articleData));
+        SC.insertLogo("logo", articleData);
         SC.setText("location", articleData.location || articleData.category);
         SC.setText("title", articleData.title);
         SC.setText("excerpt", articleData.excerpt);

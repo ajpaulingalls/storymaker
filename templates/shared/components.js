@@ -143,11 +143,12 @@ window.StoryComponents = {
   },
 
   /**
-   * Generate the Al Jazeera logo SVG
+   * Generate the Al Jazeera English logo SVG (with text)
+   * Aspect ratio: 166:60 (wide)
    * @param {string} accentColor - The accent color for the logo (default: "#fa9000")
    * @returns {string} SVG markup string
    */
-  getLogoSVG(accentColor = "#fa9000") {
+  getAJELogoSVG(accentColor = "#fa9000") {
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 166 60">
       <g fill="none">
         <path
@@ -164,14 +165,65 @@ window.StoryComponents = {
   },
 
   /**
+   * Generate the Al Jazeera Arabic logo SVG (icon only, no text)
+   * Aspect ratio: 1:1 (square)
+   * @param {string} accentColor - The accent color for the logo (default: "#32a2ef")
+   * @returns {string} SVG markup string
+   */
+  getAJALogoSVG(accentColor = "#32a2ef") {
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60">
+      <g fill="none">
+        <path fill="${accentColor}" d="M0 0h60v60H0z"></path>
+        <path
+          d="M34.05 48.03c-.07.03-.1.16-.05.33l.33.87c.2.53.52 1.15.97 1.46.47.34.72.22.81.18.07-.04.38-.22.27-.7a3 3 0 00-.28-.85c-.09-.18-.22-.3-.29-.27-.04 0 0 .18 0 .28-.01.2-.08.33-.23.4-.14.06-.48.18-.74-.28-.22-.38-.4-.87-.49-1.08-.06-.15-.16-.34-.26-.34h-.04zm-7.45 1.38l1.58 1.32 1.54-1.87-1.58-1.32-1.54 1.87zm.35-3.26l1.58 1.31 1.55-1.86-1.59-1.32-1.54 1.87zm10.12-4.6l1.86.88 1.02-2.2-1.85-.88-1.03 2.2zM27.44 40a12.75 12.75 0 003.35 4.63c.14-.97.3-1.65.44-2.13-1.4-1-2.4-2.1-3.04-3.18l-.75.68zm3.53-2.35l1.86.88 1.03-2.2-1.86-.88-1.03 2.2zm-8.99-8.75s-1.16.83-1.62 1.92c-.29.67-.27 1.4-.1 1.75.16.35.54.68 1.05.28.35-.28.5-.68.58-1.01.05-.2.06-.33.06-.43 0-.12-.04-.22-.16-.2-.33.11-.13.57-.37.79-.18.1-.66.05-.75-.42-.1-.47.27-1.07.6-1.47.32-.4.9-.92.9-.92s.4-.34.26-.51l-.03-.01c-.12 0-.42.23-.42.23zm11.44-1.21l-1.44 1.57-1.23 1.35c-.27.3-.41.6-.38.76l.17.82c.04-.15.21-.43.4-.64l1.44-1.58 1.23-1.35c.27-.3.42-.6.38-.76l-.17-.81c-.04.15-.21.42-.4.64zm-15.5 11.84c.23-.72.64-1.37 1.36-1.78 1.17-.55 1.63.86 1.63.86-.08.95-.8 1.45-1.6 1.45a2.1 2.1 0 01-1.39-.53zm8.74-22.88c-.8.02-1.43.7-1.4 1.5.02.8.69 1.43 1.48 1.4.44 0 .82-.22 1.08-.52l.03-.04c.17 1.16-.39 2.08-1.67 3.15-1.31 1.12-4.39 2.56-6.57 4.3a9.8 9.8 0 00-3.67 10.51 13.95 13.95 0 00.87 2.44c-.08 1.42.06 3.9.86 5.79 1.07 2.42 3 4.4 5.77 3.82 2.8-.66 3.11-5.22 3.43-8.55.09-.55.17-.65.34-.79.44-.38 1.53-1.4 2.05-1.86.33-.29.6-.57.79-.94.23-.44.1-1.02.1-1.02l-.3-2.2c-.09.31-.47.75-1 1.29-.56.56-2.04 1.84-2.18 1.98-.13.14-.61.5-.82 2.17-.54 4.55-1.43 6.7-3.04 7.43-.42.2-.9.3-1.42.3-2.95-.02-3.72-3.62-3.7-5.59v-.34c.69.92 1.7 1.84 2.94 1.65 1.99-.3 1.37-3.67 1.08-4.45-.28-.78-1.05-3.13-2.72-3.01-1.18.08-1.73 1.47-1.98 2.64a9.51 9.51 0 01-.27-2.86c.17-2.04.87-4.58 3.82-7.08 2.1-1.78 4.48-3.06 5.8-4.1a5.35 5.35 0 001.67-2.12 9.6 9.6 0 01-.58 2.27c-1.22 3.23-4.93 8.57-4.98 16.1 0 2.32.22 4.32.59 6.03.2-.13.38-.32.56-.53-.25-1.23-.4-2.58-.4-4.03 0-7.52 3.68-12.84 4.88-16.07.63-1.7.65-2.93.65-4.15a9.9 9.9 0 00-.64-3.68c-.34-.58-.76-.84-1.38-.84h-.07zm3.62-10.3c-.74.51-1.36 1.7-1.36 3.5.01 1.1.32 2.43 1.17 3.92-1.14 1.56-1.35 3-.87 4.38.37 1.05.56 1.32.73 1.95.42 1.6-.05 3.5-1.3 6.46-1.02 2.4-2.34 4.92-2.34 7.98 0 .7.06 1.39.16 2.06l.68-.64c-.15-2.4.8-4.81 1.97-6.98 1.7-3.17 1.92-6.39 1.59-8.15 1.2 1.28 3.21 3.2 4.39 5.16.4.66.63 1.29.7 1.93a5.05 5.05 0 01-1.39 3.76c-.8.92-.53 1.73-.5 1.9.07.25.4 1.26.63 1.91.89-1.75 3.35-2.73 4.47-4.19.25 1.8-1.1 3.5-2.09 4.64-.24.26-.5.52-.8.8-1.88 1.82-3.12 3.06-3.78 4.22-.17.26-.44.83-.58 1.27-.19.56-.43 1.5-.64 3.15-.16.98-.33 2.14-.4 2.66-.12 1.19-.47 3.06-1.92 3.6l-.24.06v.01c-1.38.3-2.8-.86-3.82-2.94-.21.16-.45.3-.7.42 1.4 3.3 3.5 4.81 5.33 4.81 1.39 0 2.49-.7 2.84-2.75.18-1.03.3-2.18.42-3.29.06-.53.32-3.55.8-4.65.6-1.23 1.92-2.41 3.87-4.43 1.2-1.25 1.86-2.3 2.2-3.14 1.14-2.08-.26-7.04-.54-7.94 0-.03 0-.04-.03-.04s-.03.01-.05.05l-.02.02A8.6 8.6 0 0136.63 30c.47-1.29.34-2.27.15-3.1l-.03-.15c-.85-3.29-4.21-6.22-5.72-7.9-1.97-2.2-1.3-3.6-.58-4.5l.44.63c2.68 3.64 7.72 9.41 10.37 14.91a18.46 18.46 0 011.46 4.06c1.05 5.7-2.92 11.49-8.87 9.86l-.12-.03c-.16.5-.31 1.31-.46 2.41.9.39 1.88.62 2.83.66h.2c4.9.06 8.72-3.6 8.02-11.3 0 0-.3-3.2-1.95-6.58-2.65-5.92-7.54-11.78-10.54-15.57a10.05 10.05 0 01-1.8-3.14c-.56-1.75-.2-3.11.52-3.7.16-.13.35-.28.53-.37.1-.06.06-.18-.01-.2H31c-.1 0-.31.05-.72.34zm-5.5 12.8c-.8.02-1.42.69-1.4 1.5a1.45 1.45 0 102.9-.1 1.45 1.45 0 00-1.45-1.4h-.05z"
+          fill="#FFF"
+        ></path>
+      </g>
+    </svg>`;
+  },
+
+  /**
+   * Generate the appropriate Al Jazeera logo SVG based on site
+   * @param {string} accentColor - The accent color for the logo
+   * @param {string} site - The site identifier ("aje" or "aja")
+   * @returns {string} SVG markup string
+   */
+  getLogoSVG(accentColor, site) {
+    if (site === "aja") {
+      return this.getAJALogoSVG(accentColor || "#32a2ef");
+    }
+    return this.getAJELogoSVG(accentColor || "#fa9000");
+  },
+
+  /**
    * Insert logo SVG into an element
    * @param {string} containerId - The ID of the container element
-   * @param {string} accentColor - The accent color for the logo
+   * @param {object|string} articleDataOrColor - Either articleData object or accent color string
+   * @param {string} [accentColorOverride] - Optional accent color override (when first param is articleData)
    */
-  insertLogo(containerId, accentColor = "#fa9000") {
+  insertLogo(containerId, articleDataOrColor, accentColorOverride) {
     const container = document.getElementById(containerId);
-    if (container) {
-      container.innerHTML = this.getLogoSVG(accentColor);
+    if (!container) return;
+
+    let site, accentColor;
+
+    // Handle both old API (containerId, accentColor) and new API (containerId, articleData, accentColor?)
+    if (typeof articleDataOrColor === "object" && articleDataOrColor !== null) {
+      site = articleDataOrColor.site;
+      accentColor = accentColorOverride || articleDataOrColor.accentColor;
+    } else {
+      // Legacy: assume accentColor string passed, default to aje
+      accentColor = articleDataOrColor;
+      site = "aje";
+    }
+
+    container.innerHTML = this.getLogoSVG(accentColor, site);
+
+    // Add a class to help templates style differently based on logo type
+    if (site === "aja") {
+      container.classList.add("logo-aja");
+    } else {
+      container.classList.add("logo-aje");
     }
   },
 

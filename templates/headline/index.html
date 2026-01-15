@@ -114,6 +114,11 @@
         height: auto;
       }
 
+      /* AJA logo is square - use height-based sizing */
+      .logo-area.logo-aja svg {
+        width: 110px;
+      }
+
       /* Category badge */
       .category-badge {
         display: flex;
@@ -458,7 +463,7 @@
         if (articleData.isRTL) {
           SC.applyAccentColors(articleData);
         }
-        SC.insertLogo("logo", articleData.isRTL ? SC.getAccentColor(articleData) : "#fa9000");
+        SC.insertLogo("logo", articleData, articleData.site === "aja" ? undefined : "#fa9000");
         SC.setStatusBadge("statusIndicator", articleData);
         SC.setText("category", articleData.category);
         SC.setText("location", articleData.location);

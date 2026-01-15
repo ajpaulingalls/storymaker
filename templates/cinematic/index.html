@@ -208,6 +208,11 @@
         height: auto;
       }
 
+      /* AJA logo is square - use height-based sizing */
+      .logo-area.logo-aja svg {
+        width: 100px;
+      }
+
       .meta-info {
         text-align: right;
         opacity: 0;
@@ -338,7 +343,7 @@
         if (articleData.isRTL) {
           SC.applyAccentColors(articleData);
         }
-        SC.insertLogo("logo", articleData.isRTL ? SC.getAccentColor(articleData) : "#e50914");
+        SC.insertLogo("logo", articleData, articleData.site === "aja" ? undefined : "#e50914");
         SC.setStatusBadge("statusBadge", articleData);
         SC.setText("category", articleData.category);
         SC.setText("location", articleData.location);

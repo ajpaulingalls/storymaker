@@ -88,6 +88,11 @@
         animation: slideDown 0.6s ease-out 0.5s forwards;
       }
 
+      /* AJA logo is square - use height-based sizing */
+      .top-bar .logo-aja svg {
+        width: 120px;
+      }
+
       .status-badge {
         font-family: "Roboto", sans-serif;
       }
@@ -274,7 +279,7 @@
       async function renderContent(articleData) {
         SC.hideLoading();
         SC.applyAccentColors(articleData);
-        SC.insertLogo("logo", SC.getAccentColor(articleData));
+        SC.insertLogo("logo", articleData);
         SC.setStatusBadge("statusBadge", articleData);
         SC.renderTags("tags", SC.getBasicTags(articleData));
         SC.setText("title", articleData.title);
