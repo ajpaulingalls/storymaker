@@ -1,11 +1,15 @@
 import puppeteer, { type Browser, type Page } from "puppeteer";
 import { join } from "path";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 
 export interface RecorderOptions {
   url: string;
   outputPath: string;
   width?: number;
   height?: number;
+  frameRate?: number;
+  duration?: number;
 }
 
 export interface RecorderResult {
@@ -14,29 +18,70 @@ export interface RecorderResult {
   error?: string;
 }
 
+/**
+ * Animation control script injected into the page.
+ * Captures all CSS animations and provides pause/seek functionality.
+ */
+const ANIMATION_CONTROL_SCRIPT = `
+(() => {
+  // Get all animations on the page
+  window.__animations = document.getAnimations();
+  
+  // Pause all animations
+  window.__animations.forEach(a => a.pause());
+  
+  // Seek all animations to a specific time
+  window.__seekTo = (timeMs) => {
+    window.__animations.forEach(a => {
+      try {
+        const timing = a.effect?.getTiming();
+        if (timing) {
+          // For infinite animations, cap at one iteration
+          const iterationDuration = timing.duration || 0;
+          const maxTime = timing.iterations === Infinity 
+            ? iterationDuration 
+            : (iterationDuration * (timing.iterations || 1)) + (timing.delay || 0);
+          
+          // Set currentTime, accounting for delay
+          a.currentTime = Math.min(timeMs, maxTime);
+        } else {
+          a.currentTime = timeMs;
+        }
+      } catch (e) {
+        // Some animations may not support seeking
+      }
+    });
+  };
+  
+  // Return animation count for logging
+  return window.__animations.length;
+})()
+`;
+
 export async function recordStory(
   options: RecorderOptions
 ): Promise<RecorderResult> {
-  const { url, outputPath, width = 1080, height = 1920 } = options;
+  const { 
+    url, 
+    outputPath, 
+    width = 1080, 
+    height = 1920,
+    frameRate = 25,
+    duration = 10000, // 10 seconds default
+  } = options;
 
   let browser: Browser | null = null;
   let page: Page | null = null;
+  let tempDir: string | null = null;
 
-  // Promises that will be resolved by the page
+  // Promise that will be resolved when page signals ready
   let resolveReady: () => void;
-  let resolveDone: () => void;
-
   const readyPromise = new Promise<void>((resolve) => {
     resolveReady = resolve;
   });
 
-  const donePromise = new Promise<void>((resolve) => {
-    resolveDone = resolve;
-  });
-
   try {
     // Launch browser
-    // Use system Chromium if PUPPETEER_EXECUTABLE_PATH is set (for Docker deployment)
     const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
     browser = await puppeteer.launch({
       executablePath,
@@ -44,18 +89,22 @@ export async function recordStory(
         `--window-size=${width},${height}`,
         "--no-sandbox",
         "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage", // Important for Docker - use /tmp instead of /dev/shm
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
       ],
+      timeout: 120000, // 2 minute timeout for browser launch
     });
     console.log(`Browser launched${executablePath ? ` (using ${executablePath})` : ""}`);
 
     page = await browser.newPage();
 
-    // Forward console messages from the page to Node console
+    // Set longer timeouts for frame capture
+    page.setDefaultTimeout(120000); // 2 minutes
+    page.setDefaultNavigationTimeout(60000); // 1 minute for navigation
+
+    // Forward console messages from the page
     page.on("console", async (msg) => {
       const type = msg.type();
-      
-      // Get the actual values from JSHandles
       const args = await Promise.all(
         msg.args().map(async (arg) => {
           try {
@@ -65,7 +114,6 @@ export async function recordStory(
           }
         })
       );
-      
       const text = args.map(arg => 
         typeof arg === "object" ? JSON.stringify(arg) : String(arg)
       ).join(" ");
@@ -79,100 +127,119 @@ export async function recordStory(
       }
     });
 
-    // Forward page errors
     page.on("pageerror", (error) => {
       const message = error instanceof Error ? error.message : String(error);
       console.error(`[Page Error] ${message}`);
     });
 
-    // Set viewport to portrait video dimensions
+    // Set viewport
     await page.setViewport({
       width,
       height,
       deviceScaleFactor: 1,
     });
 
-    // Expose functions for page-to-app communication
+    // Expose ready signal function
     await page.exposeFunction("storyReady", () => {
-      console.log("Page signaled ready - starting recording...");
+      console.log("Page signaled ready");
       resolveReady();
     });
 
+    // Expose done signal function (not used in frame-by-frame mode, but templates call it)
     await page.exposeFunction("storyDone", () => {
-      console.log("Page signaled done - stopping recording...");
-      resolveDone();
+      // No-op in frame-by-frame mode
     });
 
-    // Navigate to the page
+    // Navigate to page
     console.log(`Loading template from: ${url}`);
     await page.goto(url, {
       waitUntil: "domcontentloaded",
     });
 
-    // Wait for the page to signal it's ready (with timeout)
+    // Wait for page to signal ready
     console.log("Waiting for page to be ready...");
     const readyTimeout = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error("Timeout waiting for page to signal ready (30s)")), 30000);
+      setTimeout(() => reject(new Error("Timeout waiting for page ready (30s)")), 30000);
     });
     await Promise.race([readyPromise, readyTimeout]);
 
-    // Determine output paths
-    const webmPath = outputPath.replace(/\.mp4$/, ".webm") as `${string}.webm`;
-    const finalPath = outputPath;
+    // Wait for fonts to load (runs in browser context)
+    await page.evaluate("document.fonts.ready");
+    console.log("Fonts loaded");
 
-    // Start screencast recording
-    console.log(`Starting screencast recording to: ${webmPath}`);
-    const recorder = await page.screencast({
-      path: webmPath,
-      speed: 1,
-    });
+    // Small delay to ensure all animations are initialized
+    await new Promise(resolve => setTimeout(resolve, 100));
 
-    // Wait for the page to signal it's done (with timeout)
-    console.log("Recording... waiting for animation to complete");
-    const doneTimeout = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error("Timeout waiting for page to signal done (60s)")), 60000);
-    });
-    await Promise.race([donePromise, doneTimeout]);
+    // Inject animation control script
+    const animationCount = await page.evaluate(ANIMATION_CONTROL_SCRIPT);
+    console.log(`Animation control initialized: ${animationCount} animations found`);
 
-    // Stop recording
-    await recorder.stop();
-    console.log("Recording stopped");
+    // Create temp directory for frames
+    tempDir = await mkdtemp(join(tmpdir(), "storymaker-frames-"));
+    console.log(`Temp directory created: ${tempDir}`);
 
-    // Convert WebM to MP4 using ffmpeg
-    if (finalPath.endsWith(".mp4")) {
-      console.log(`Converting to MP4: ${finalPath}`);
-      const startTime = Date.now();
+    // Calculate frame parameters
+    const totalFrames = Math.ceil((duration / 1000) * frameRate);
+    const frameInterval = 1000 / frameRate; // ms per frame
+    
+    console.log(`Starting frame capture: ${totalFrames} frames at ${frameRate}fps`);
+    const captureStartTime = Date.now();
+
+    // Capture frames
+    for (let frame = 0; frame < totalFrames; frame++) {
+      const timeMs = frame * frameInterval;
       
-      // Use ultrafast preset for faster encoding on limited compute resources
-      const ffmpegResult =
-        await Bun.$`ffmpeg -y -i ${webmPath} -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p ${finalPath}`;
+      // Seek animations to current time
+      await page.evaluate((t) => {
+        (window as any).__seekTo(t);
+      }, timeMs);
 
-      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-      
-      if (ffmpegResult.exitCode !== 0) {
-        console.warn(
-          `FFmpeg conversion failed after ${duration}s, keeping WebM file:`,
-          ffmpegResult.stderr.toString()
-        );
-        return {
-          success: true,
-          outputPath: webmPath,
-        };
+      // Take screenshot
+      const framePath = join(tempDir, `frame_${String(frame).padStart(4, "0")}.png`);
+      await page.screenshot({
+        path: framePath,
+        type: "png",
+      });
+
+      // Progress logging every 30 frames (1 second)
+      if (frame % 30 === 0) {
+        const progress = ((frame / totalFrames) * 100).toFixed(0);
+        console.log(`Frame capture: ${progress}% (${frame}/${totalFrames})`);
       }
-
-      console.log(`FFmpeg conversion completed in ${duration}s`);
-
-      // Remove the WebM file after successful conversion
-      await Bun.$`rm ${webmPath}`.quiet();
     }
+
+    const captureDuration = ((Date.now() - captureStartTime) / 1000).toFixed(1);
+    console.log(`Frame capture completed in ${captureDuration}s`);
+
+    // Stitch frames into video with FFmpeg
+    console.log(`Stitching frames into video: ${outputPath}`);
+    const stitchStartTime = Date.now();
+    
+    const framePattern = join(tempDir, "frame_%04d.png");
+    const ffmpegResult = await Bun.$`ffmpeg -y -framerate ${frameRate} -i ${framePattern} -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p ${outputPath}`;
+
+    const stitchDuration = ((Date.now() - stitchStartTime) / 1000).toFixed(1);
+
+    if (ffmpegResult.exitCode !== 0) {
+      console.error(`FFmpeg failed after ${stitchDuration}s:`, ffmpegResult.stderr.toString());
+      return {
+        success: false,
+        outputPath,
+        error: `FFmpeg failed: ${ffmpegResult.stderr.toString()}`,
+      };
+    }
+
+    console.log(`FFmpeg stitching completed in ${stitchDuration}s`);
+
+    const totalDuration = ((Date.now() - captureStartTime) / 1000).toFixed(1);
+    console.log(`Total video generation time: ${totalDuration}s`);
 
     return {
       success: true,
-      outputPath: finalPath,
+      outputPath,
     };
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error("Recording failed:", errorMessage);
     return {
       success: false,
@@ -180,11 +247,28 @@ export async function recordStory(
       error: errorMessage,
     };
   } finally {
+    // Cleanup - wrap in try-catch since browser may already be closed
     if (page) {
-      await page.close();
+      try {
+        await page.close();
+      } catch {
+        // Page may already be closed
+      }
     }
     if (browser) {
-      await browser.close();
+      try {
+        await browser.close();
+      } catch {
+        // Browser may already be closed
+      }
+    }
+    if (tempDir) {
+      try {
+        await rm(tempDir, { recursive: true });
+        console.log("Temp directory cleaned up");
+      } catch {
+        console.warn(`Failed to cleanup temp directory: ${tempDir}`);
+      }
     }
   }
 }

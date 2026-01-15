@@ -218,8 +218,13 @@ async function initStory(options = {}) {
     console.log("StoryMaker: Rendering content...");
     await renderContent(articleData);
 
-    // Give the DOM and images time to load
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait for fonts to be fully loaded
+    console.log("StoryMaker: Waiting for fonts...");
+    await document.fonts.ready;
+    console.log("StoryMaker: Fonts loaded");
+
+    // Give the DOM and images additional time to settle
+    await new Promise(resolve => setTimeout(resolve, 300));
 
     // Signal that we're ready for recording
     console.log("StoryMaker: Signaling ready...");
@@ -230,8 +235,8 @@ async function initStory(options = {}) {
       console.warn("StoryMaker: storyReady function not available");
     }
 
-    // Small delay to ensure recording has started before animations begin
-    await new Promise(resolve => setTimeout(resolve, 175));
+    // Small delay for frame-by-frame capture to initialize
+    await new Promise(resolve => setTimeout(resolve, 50));
 
     // Start animations by removing the paused state
     console.log("StoryMaker: Starting animations...");
