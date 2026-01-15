@@ -104,9 +104,9 @@ jobs:
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --name "${{ steps.names.outputs.app_service_plan }}" \
             --is-linux \
-            --sku B2 \
+            --sku P2v3 \
             --output none
-          echo "App service plan created (B2 tier)"
+          echo "App service plan created (P2v3 tier - 4 vCPUs, 16 GB RAM)"
 
       - name: Create Web App
         if: ${{ inputs.destroy != true }}

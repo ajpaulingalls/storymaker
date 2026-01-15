@@ -141,12 +141,17 @@ export async function recordStory(
     // Convert WebM to MP4 using ffmpeg
     if (finalPath.endsWith(".mp4")) {
       console.log(`Converting to MP4: ${finalPath}`);
+      const startTime = Date.now();
+      
+      // Use ultrafast preset for faster encoding on limited compute resources
       const ffmpegResult =
-        await Bun.$`ffmpeg -y -i ${webmPath} -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p ${finalPath}`.quiet();
+        await Bun.$`ffmpeg -y -i ${webmPath} -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p ${finalPath}`;
 
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      
       if (ffmpegResult.exitCode !== 0) {
         console.warn(
-          "FFmpeg conversion failed, keeping WebM file:",
+          `FFmpeg conversion failed after ${duration}s, keeping WebM file:`,
           ffmpegResult.stderr.toString()
         );
         return {
@@ -154,6 +159,8 @@ export async function recordStory(
           outputPath: webmPath,
         };
       }
+
+      console.log(`FFmpeg conversion completed in ${duration}s`);
 
       // Remove the WebM file after successful conversion
       await Bun.$`rm ${webmPath}`.quiet();

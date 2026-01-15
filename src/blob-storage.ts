@@ -56,8 +56,10 @@ export async function uploadVideo(
     // Read the file and upload
     const file = Bun.file(localPath);
     const buffer = await file.arrayBuffer();
+    const sizeMB = (buffer.byteLength / (1024 * 1024)).toFixed(2);
 
-    console.log(`[Blob Storage] Uploading ${filename} (${buffer.byteLength} bytes)...`);
+    console.log(`[Blob Storage] Uploading ${filename} (${sizeMB} MB)...`);
+    const startTime = Date.now();
 
     await blockBlobClient.uploadData(buffer, {
       blobHTTPHeaders: {
@@ -65,8 +67,9 @@ export async function uploadVideo(
       },
     });
 
+    const duration = ((Date.now() - startTime) / 1000).toFixed(1);
     const url = blockBlobClient.url;
-    console.log(`[Blob Storage] Upload complete: ${url}`);
+    console.log(`[Blob Storage] Upload complete in ${duration}s: ${url}`);
 
     return url;
   } catch (error) {
