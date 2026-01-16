@@ -80,6 +80,50 @@ export async function uploadVideo(
 }
 
 /**
+ * Upload a thumbnail image to Azure Blob Storage.
+ * @param localPath - Path to the local thumbnail file
+ * @param filename - Filename to use in blob storage
+ * @returns The public URL of the uploaded blob, or null if upload failed
+ */
+export async function uploadThumbnail(
+  localPath: string,
+  filename: string
+): Promise<string | null> {
+  const client = getContainerClient();
+  if (!client) {
+    return null;
+  }
+
+  try {
+    const blockBlobClient = client.getBlockBlobClient(filename);
+
+    // Read the file and upload
+    const file = Bun.file(localPath);
+    const buffer = await file.arrayBuffer();
+    const sizeKB = (buffer.byteLength / 1024).toFixed(2);
+
+    console.log(`[Blob Storage] Uploading thumbnail ${filename} (${sizeKB} KB)...`);
+    const startTime = Date.now();
+
+    await blockBlobClient.uploadData(buffer, {
+      blobHTTPHeaders: {
+        blobContentType: "image/jpeg",
+      },
+    });
+
+    const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+    const url = blockBlobClient.url;
+    console.log(`[Blob Storage] Thumbnail upload complete in ${duration}s: ${url}`);
+
+    return url;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error(`[Blob Storage] Thumbnail upload failed: ${errorMessage}`);
+    return null;
+  }
+}
+
+/**
  * Delete a video from Azure Blob Storage.
  * @param filename - Filename of the blob to delete
  * @returns true if deleted, false otherwise

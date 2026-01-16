@@ -6,7 +6,12 @@
   "scripts": {
     "debug": "bun run src/debug-server.ts",
     "start": "bun run index.ts",
-    "serve": "bun run src/web-service.ts"
+    "serve": "bun run src/web-service.ts",
+    "docker:build": "docker build -t storymaker:test .",
+    "docker:run": "docker run -p 8080:8080 storymaker:test",
+    "docker:rebuild": "docker build --no-cache -t storymaker:test .",
+    "docker:stop": "docker stop $(docker ps -q --filter ancestor=storymaker:test) 2>/dev/null || true",
+    "docker:update": "bun run docker:stop && bun run docker:build && bun run docker:run"
   },
   "devDependencies": {
     "@types/bun": "latest"
@@ -15,6 +20,7 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@azure/data-tables": "^13.3.2",
     "@azure/storage-blob": "^12.29.1",
     "puppeteer": "^24.34.0"
   }

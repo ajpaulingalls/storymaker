@@ -4,9 +4,17 @@ import { recordStory } from "./recorder";
 import { startPersistentServer, buildTemplateUrl } from "./server";
 import {
   uploadVideo,
+  uploadThumbnail,
   isBlobStorageEnabled,
   ensureContainer,
 } from "./blob-storage";
+import {
+  createJobStore,
+  generateJobId,
+  isTableStorageEnabled,
+  type JobStore,
+  type Job,
+} from "./job-store";
 
 const MIME_TYPES: Record<string, string> = {
   ".mp4": "video/mp4",
@@ -21,12 +29,166 @@ export interface CreateVideoRequest {
 }
 
 // Internal template server
-let templateServer: Server;
+let templateServer: Server<undefined>;
+
+// Job store instance
+let jobStore: JobStore;
+
+// Cleanup interval handle
+let cleanupInterval: ReturnType<typeof setInterval> | null = null;
+
+// 24 hours in milliseconds
+const JOB_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+// Cleanup interval: run every hour
+const CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
 
 function generateVideoFilename(): string {
   const timestamp = Date.now();
   const random = Math.random().toString(36).substring(2, 8);
   return `${timestamp}-${random}.mp4`;
+}
+
+/**
+ * Process a video job in the background
+ */
+async function processVideoJob(job: Job, req: Request): Promise<void> {
+  try {
+    // Update status to processing
+    await jobStore.update(job.id, { status: "processing", progress: "initializing" });
+
+    console.log(`[Job ${job.id}] Starting video creation for: ${job.request.site}/${job.request.postType}/${job.request.slug}`);
+
+    // Generate unique filename
+    const filename = generateVideoFilename();
+    const videosDir = join(import.meta.dir, "..", "videos");
+    const outputPath = join(videosDir, filename);
+
+    // Ensure videos directory exists
+    await Bun.$`mkdir -p ${videosDir}`.quiet();
+
+    // Build template URL using the shared function
+    const port = templateServer.port;
+    if (!port) {
+      throw new Error("Template server port is not available");
+    }
+    const templateUrl = buildTemplateUrl(port, {
+      template: job.request.template,
+      site: job.request.site,
+      postType: job.request.postType,
+      postSlug: job.request.slug,
+    });
+    console.log(`[Job ${job.id}] Template URL: ${templateUrl}`);
+
+    // Update progress
+    await jobStore.update(job.id, { progress: "recording video" });
+
+    // Record the video
+    const result = await recordStory({
+      url: templateUrl,
+      outputPath,
+      width: 1080,
+      height: 1920,
+    });
+
+    if (result.success) {
+      let videoUrl: string;
+      let thumbnailUrl: string | undefined;
+
+      // Update progress
+      await jobStore.update(job.id, { progress: "uploading video" });
+
+      // Try to upload to Azure Blob Storage if configured
+      if (isBlobStorageEnabled()) {
+        const blobUrl = await uploadVideo(result.outputPath, filename);
+
+        if (blobUrl) {
+          // Successfully uploaded video to blob storage
+          videoUrl = blobUrl;
+
+          // Delete the local video temp file
+          try {
+            await Bun.$`rm ${result.outputPath}`.quiet();
+            console.log(`[Job ${job.id}] Deleted local temp file: ${result.outputPath}`);
+          } catch {
+            console.warn(`[Job ${job.id}] Failed to delete temp file: ${result.outputPath}`);
+          }
+
+          // Upload thumbnail if available
+          if (result.thumbnailPath) {
+            await jobStore.update(job.id, { progress: "uploading thumbnail" });
+            const thumbnailFilename = filename.replace(/\.mp4$/, ".jpg");
+            const thumbnailBlobUrl = await uploadThumbnail(result.thumbnailPath, thumbnailFilename);
+
+            if (thumbnailBlobUrl) {
+              thumbnailUrl = thumbnailBlobUrl;
+              console.log(`[Job ${job.id}] Thumbnail uploaded: ${thumbnailUrl}`);
+
+              // Delete the local thumbnail temp file
+              try {
+                await Bun.$`rm ${result.thumbnailPath}`.quiet();
+                console.log(`[Job ${job.id}] Deleted local thumbnail file: ${result.thumbnailPath}`);
+              } catch {
+                console.warn(`[Job ${job.id}] Failed to delete thumbnail file: ${result.thumbnailPath}`);
+              }
+            } else {
+              console.warn(`[Job ${job.id}] Thumbnail upload failed`);
+            }
+          }
+        } else {
+          // Blob upload failed, fall back to local URL
+          console.warn(`[Job ${job.id}] Blob upload failed, falling back to local URL`);
+          const host = req.headers.get("host") || "localhost:8080";
+          const protocol = req.headers.get("x-forwarded-proto") || "http";
+          videoUrl = `${protocol}://${host}/videos/${filename}`;
+          
+          // Local thumbnail URL if available
+          if (result.thumbnailPath) {
+            const thumbnailFilename = filename.replace(/\.mp4$/, ".jpg");
+            thumbnailUrl = `${protocol}://${host}/videos/${thumbnailFilename}`;
+          }
+        }
+      } else {
+        // Blob storage not configured, use local URL
+        const host = req.headers.get("host") || "localhost:8080";
+        const protocol = req.headers.get("x-forwarded-proto") || "http";
+        videoUrl = `${protocol}://${host}/videos/${filename}`;
+        
+        // Local thumbnail URL if available
+        if (result.thumbnailPath) {
+          const thumbnailFilename = filename.replace(/\.mp4$/, ".jpg");
+          thumbnailUrl = `${protocol}://${host}/videos/${thumbnailFilename}`;
+        }
+      }
+
+      console.log(`[Job ${job.id}] Video created: ${videoUrl}`);
+      if (thumbnailUrl) {
+        console.log(`[Job ${job.id}] Thumbnail created: ${thumbnailUrl}`);
+      }
+
+      // Update job as completed
+      await jobStore.update(job.id, {
+        status: "completed",
+        progress: undefined,
+        result: { url: videoUrl, thumbnailUrl },
+      });
+    } else {
+      console.error(`[Job ${job.id}] Recording failed: ${result.error}`);
+      await jobStore.update(job.id, {
+        status: "failed",
+        progress: undefined,
+        error: result.error,
+      });
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error(`[Job ${job.id}] Error: ${errorMessage}`);
+    await jobStore.update(job.id, {
+      status: "failed",
+      progress: undefined,
+      error: errorMessage,
+    });
+  }
 }
 
 async function handleCreateVideo(req: Request): Promise<Response> {
@@ -44,78 +206,28 @@ async function handleCreateVideo(req: Request): Promise<Response> {
       );
     }
 
-    console.log(`[API] Creating video for: ${body.site}/${body.postType}/${body.slug} (template: ${body.template})`);
-
-    // Generate unique filename
-    const filename = generateVideoFilename();
-    const videosDir = join(import.meta.dir, "..", "videos");
-    const outputPath = join(videosDir, filename);
-
-    // Ensure videos directory exists
-    await Bun.$`mkdir -p ${videosDir}`.quiet();
-
-    // Build template URL using the shared function
-    const templateUrl = buildTemplateUrl(templateServer.port, {
-      template: body.template,
-      site: body.site,
-      postType: body.postType,
-      postSlug: body.slug,
-    });
-    console.log(`[API] Template URL: ${templateUrl}`);
-
-    // Record the video
-    const result = await recordStory({
-      url: templateUrl,
-      outputPath,
-      width: 1080,
-      height: 1920,
+    // Create a job
+    const jobId = generateJobId();
+    const job = await jobStore.create({
+      id: jobId,
+      status: "pending",
+      request: {
+        site: body.site,
+        slug: body.slug,
+        postType: body.postType,
+        template: body.template,
+      },
     });
 
-    if (result.success) {
-      let videoUrl: string;
+    console.log(`[API] Created job ${jobId} for: ${body.site}/${body.postType}/${body.slug} (template: ${body.template})`);
 
-      // Try to upload to Azure Blob Storage if configured
-      if (isBlobStorageEnabled()) {
-        const blobUrl = await uploadVideo(result.outputPath, filename);
+    // Spawn background processing (don't await)
+    processVideoJob(job, req).catch((error) => {
+      console.error(`[Job ${jobId}] Unhandled error in background processing:`, error);
+    });
 
-        if (blobUrl) {
-          // Successfully uploaded to blob storage
-          videoUrl = blobUrl;
-
-          // Delete the local temp file
-          try {
-            await Bun.$`rm ${result.outputPath}`.quiet();
-            console.log(`[API] Deleted local temp file: ${result.outputPath}`);
-          } catch {
-            console.warn(`[API] Failed to delete temp file: ${result.outputPath}`);
-          }
-        } else {
-          // Blob upload failed, fall back to local URL
-          console.warn("[API] Blob upload failed, falling back to local URL");
-          const host = req.headers.get("host") || "localhost:8080";
-          const protocol = req.headers.get("x-forwarded-proto") || "http";
-          videoUrl = `${protocol}://${host}/videos/${filename}`;
-        }
-      } else {
-        // Blob storage not configured, use local URL
-        const host = req.headers.get("host") || "localhost:8080";
-        const protocol = req.headers.get("x-forwarded-proto") || "http";
-        videoUrl = `${protocol}://${host}/videos/${filename}`;
-      }
-
-      console.log(`[API] Video created: ${videoUrl}`);
-
-      return Response.json({
-        success: true,
-        url: videoUrl,
-      });
-    } else {
-      console.error(`[API] Recording failed: ${result.error}`);
-      return Response.json(
-        { success: false, error: result.error },
-        { status: 500 }
-      );
-    }
+    // Return job ID immediately
+    return Response.json({ jobId }, { status: 202 });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error(`[API] Error: ${errorMessage}`);
@@ -124,6 +236,42 @@ async function handleCreateVideo(req: Request): Promise<Response> {
       { status: 500 }
     );
   }
+}
+
+async function handleGetJob(jobId: string): Promise<Response> {
+  const job = await jobStore.get(jobId);
+
+  if (!job) {
+    return Response.json(
+      { success: false, error: "Job not found" },
+      { status: 404 }
+    );
+  }
+
+  // Build response based on job status
+  const response: Record<string, unknown> = {
+    jobId: job.id,
+    status: job.status,
+    createdAt: job.createdAt.toISOString(),
+    updatedAt: job.updatedAt.toISOString(),
+  };
+
+  if (job.progress) {
+    response.progress = job.progress;
+  }
+
+  if (job.status === "completed" && job.result) {
+    response.url = job.result.url;
+    if (job.result.thumbnailUrl) {
+      response.thumbnailUrl = job.result.thumbnailUrl;
+    }
+  }
+
+  if (job.status === "failed" && job.error) {
+    response.error = job.error;
+  }
+
+  return Response.json(response);
 }
 
 async function serveVideo(pathname: string): Promise<Response> {
@@ -151,9 +299,35 @@ async function serveVideo(pathname: string): Promise<Response> {
   return new Response("Video not found", { status: 404 });
 }
 
-export async function startWebService(port: number = 8080): Promise<Server> {
+/**
+ * Start periodic job cleanup
+ */
+function startJobCleanup(): void {
+  if (cleanupInterval) {
+    return;
+  }
+
+  // Run cleanup immediately on startup
+  jobStore.cleanup(JOB_MAX_AGE_MS).catch((error) => {
+    console.error("[Job Store] Cleanup error:", error);
+  });
+
+  // Then run periodically
+  cleanupInterval = setInterval(() => {
+    jobStore.cleanup(JOB_MAX_AGE_MS).catch((error) => {
+      console.error("[Job Store] Cleanup error:", error);
+    });
+  }, CLEANUP_INTERVAL_MS);
+
+  console.log("[Job Store] Cleanup scheduled (every hour, removes jobs older than 24h)");
+}
+
+export async function startWebService(port: number = 8080): Promise<Server<undefined>> {
   // Start the internal template server first
   templateServer = await startPersistentServer();
+
+  // Initialize job store
+  jobStore = createJobStore();
 
   // Initialize blob storage if configured
   const blobEnabled = isBlobStorageEnabled();
@@ -164,6 +338,9 @@ export async function startWebService(port: number = 8080): Promise<Server> {
     }
   }
 
+  // Start job cleanup
+  startJobCleanup();
+
   const server = Bun.serve({
     port,
     async fetch(req) {
@@ -173,9 +350,15 @@ export async function startWebService(port: number = 8080): Promise<Server> {
 
       console.log(`[Web Service] ${method} ${pathname}`);
 
-      // API endpoint: create video
+      // API endpoint: create video (returns job ID)
       if (pathname === "/api/create-video" && method === "POST") {
         return handleCreateVideo(req);
+      }
+
+      // API endpoint: get job status
+      const jobMatch = pathname.match(/^\/api\/job\/([a-z0-9-]+)$/);
+      if (jobMatch?.[1] && method === "GET") {
+        return handleGetJob(jobMatch[1]);
       }
 
       // Serve videos
@@ -193,9 +376,10 @@ export async function startWebService(port: number = 8080): Promise<Server> {
         return Response.json({
           name: "StoryMaker Video Service",
           storage: blobEnabled ? "Azure Blob Storage" : "Local filesystem",
+          jobStore: isTableStorageEnabled() ? "Azure Table Storage" : "In-memory",
           endpoints: {
             "POST /api/create-video": {
-              description: "Create a video from a story",
+              description: "Start video creation job (returns immediately)",
               body: {
                 site: "string (required) - Site identifier (e.g., 'aje', 'aja')",
                 slug: "string (required) - Article slug",
@@ -203,8 +387,20 @@ export async function startWebService(port: number = 8080): Promise<Server> {
                 template: "string (required) - Template name (e.g., 'default', 'breaking')",
               },
               response: {
-                success: "boolean",
-                url: "string - URL to download the video (Azure Blob URL or local URL)",
+                jobId: "string - Job ID to poll for status",
+              },
+            },
+            "GET /api/job/{jobId}": {
+              description: "Get job status",
+              response: {
+                jobId: "string - Job ID",
+                status: "string - pending | processing | completed | failed",
+                progress: "string (optional) - Current progress message",
+                url: "string (when completed) - Video URL",
+                thumbnailUrl: "string (when completed) - Thumbnail URL (JPEG of last frame)",
+                error: "string (when failed) - Error message",
+                createdAt: "string - ISO timestamp",
+                updatedAt: "string - ISO timestamp",
               },
             },
             "GET /videos/{filename}": "Serve generated videos (fallback when blob storage unavailable)",
@@ -218,10 +414,12 @@ export async function startWebService(port: number = 8080): Promise<Server> {
   });
 
   console.log(`\n🎬 StoryMaker Web Service running at http://localhost:${port}`);
-  console.log(`   POST /api/create-video - Create a video`);
-  console.log(`   GET /videos/{filename} - Serve videos (fallback when blob storage unavailable)`);
+  console.log(`   POST /api/create-video - Start video creation job`);
+  console.log(`   GET /api/job/{jobId} - Get job status`);
+  console.log(`   GET /videos/{filename} - Serve videos (fallback)`);
   console.log(`   GET /health - Health check`);
-  console.log(`   Storage: ${blobEnabled ? "Azure Blob Storage" : "Local filesystem"}\n`);
+  console.log(`   Storage: ${blobEnabled ? "Azure Blob Storage" : "Local filesystem"}`);
+  console.log(`   Job Store: ${isTableStorageEnabled() ? "Azure Table Storage" : "In-memory"}\n`);
 
   return server;
 }
