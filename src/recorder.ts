@@ -15,6 +15,7 @@ export interface RecorderOptions {
 export interface RecorderResult {
   success: boolean;
   outputPath: string;
+  thumbnailPath?: string;
   error?: string;
 }
 
@@ -231,12 +232,28 @@ export async function recordStory(
 
     console.log(`FFmpeg stitching completed in ${stitchDuration}s`);
 
+    // Generate thumbnail from the last frame
+    const lastFramePath = join(tempDir, `frame_${String(totalFrames - 1).padStart(4, "0")}.png`);
+    const thumbnailPath = outputPath.replace(/\.mp4$/, ".jpg");
+    
+    console.log(`Generating thumbnail from last frame...`);
+    const thumbnailResult = await Bun.$`ffmpeg -y -i ${lastFramePath} -q:v 2 ${thumbnailPath}`;
+    
+    let finalThumbnailPath: string | undefined;
+    if (thumbnailResult.exitCode !== 0) {
+      console.warn(`Thumbnail generation failed: ${thumbnailResult.stderr.toString()}`);
+    } else {
+      finalThumbnailPath = thumbnailPath;
+      console.log(`Thumbnail generated: ${thumbnailPath}`);
+    }
+
     const totalDuration = ((Date.now() - captureStartTime) / 1000).toFixed(1);
     console.log(`Total video generation time: ${totalDuration}s`);
 
     return {
       success: true,
       outputPath,
+      thumbnailPath: finalThumbnailPath,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";

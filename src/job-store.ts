@@ -16,6 +16,7 @@ export interface Job {
   progress?: string;
   result?: {
     url: string;
+    thumbnailUrl?: string;
   };
   error?: string;
   createdAt: Date;

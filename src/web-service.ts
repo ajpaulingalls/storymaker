@@ -4,6 +4,7 @@ import { recordStory } from "./recorder";
 import { startPersistentServer, buildTemplateUrl } from "./server";
 import {
   uploadVideo,
+  uploadThumbnail,
   isBlobStorageEnabled,
   ensureContainer,
 } from "./blob-storage";
@@ -92,6 +93,7 @@ async function processVideoJob(job: Job, req: Request): Promise<void> {
 
     if (result.success) {
       let videoUrl: string;
+      let thumbnailUrl: string | undefined;
 
       // Update progress
       await jobStore.update(job.id, { progress: "uploading video" });
@@ -101,15 +103,37 @@ async function processVideoJob(job: Job, req: Request): Promise<void> {
         const blobUrl = await uploadVideo(result.outputPath, filename);
 
         if (blobUrl) {
-          // Successfully uploaded to blob storage
+          // Successfully uploaded video to blob storage
           videoUrl = blobUrl;
 
-          // Delete the local temp file
+          // Delete the local video temp file
           try {
             await Bun.$`rm ${result.outputPath}`.quiet();
             console.log(`[Job ${job.id}] Deleted local temp file: ${result.outputPath}`);
           } catch {
             console.warn(`[Job ${job.id}] Failed to delete temp file: ${result.outputPath}`);
+          }
+
+          // Upload thumbnail if available
+          if (result.thumbnailPath) {
+            await jobStore.update(job.id, { progress: "uploading thumbnail" });
+            const thumbnailFilename = filename.replace(/\.mp4$/, ".jpg");
+            const thumbnailBlobUrl = await uploadThumbnail(result.thumbnailPath, thumbnailFilename);
+
+            if (thumbnailBlobUrl) {
+              thumbnailUrl = thumbnailBlobUrl;
+              console.log(`[Job ${job.id}] Thumbnail uploaded: ${thumbnailUrl}`);
+
+              // Delete the local thumbnail temp file
+              try {
+                await Bun.$`rm ${result.thumbnailPath}`.quiet();
+                console.log(`[Job ${job.id}] Deleted local thumbnail file: ${result.thumbnailPath}`);
+              } catch {
+                console.warn(`[Job ${job.id}] Failed to delete thumbnail file: ${result.thumbnailPath}`);
+              }
+            } else {
+              console.warn(`[Job ${job.id}] Thumbnail upload failed`);
+            }
           }
         } else {
           // Blob upload failed, fall back to local URL
@@ -117,21 +141,36 @@ async function processVideoJob(job: Job, req: Request): Promise<void> {
           const host = req.headers.get("host") || "localhost:8080";
           const protocol = req.headers.get("x-forwarded-proto") || "http";
           videoUrl = `${protocol}://${host}/videos/${filename}`;
+          
+          // Local thumbnail URL if available
+          if (result.thumbnailPath) {
+            const thumbnailFilename = filename.replace(/\.mp4$/, ".jpg");
+            thumbnailUrl = `${protocol}://${host}/videos/${thumbnailFilename}`;
+          }
         }
       } else {
         // Blob storage not configured, use local URL
         const host = req.headers.get("host") || "localhost:8080";
         const protocol = req.headers.get("x-forwarded-proto") || "http";
         videoUrl = `${protocol}://${host}/videos/${filename}`;
+        
+        // Local thumbnail URL if available
+        if (result.thumbnailPath) {
+          const thumbnailFilename = filename.replace(/\.mp4$/, ".jpg");
+          thumbnailUrl = `${protocol}://${host}/videos/${thumbnailFilename}`;
+        }
       }
 
       console.log(`[Job ${job.id}] Video created: ${videoUrl}`);
+      if (thumbnailUrl) {
+        console.log(`[Job ${job.id}] Thumbnail created: ${thumbnailUrl}`);
+      }
 
       // Update job as completed
       await jobStore.update(job.id, {
         status: "completed",
         progress: undefined,
-        result: { url: videoUrl },
+        result: { url: videoUrl, thumbnailUrl },
       });
     } else {
       console.error(`[Job ${job.id}] Recording failed: ${result.error}`);
@@ -223,6 +262,9 @@ async function handleGetJob(jobId: string): Promise<Response> {
 
   if (job.status === "completed" && job.result) {
     response.url = job.result.url;
+    if (job.result.thumbnailUrl) {
+      response.thumbnailUrl = job.result.thumbnailUrl;
+    }
   }
 
   if (job.status === "failed" && job.error) {
@@ -355,6 +397,7 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
                 status: "string - pending | processing | completed | failed",
                 progress: "string (optional) - Current progress message",
                 url: "string (when completed) - Video URL",
+                thumbnailUrl: "string (when completed) - Thumbnail URL (JPEG of last frame)",
                 error: "string (when failed) - Error message",
                 createdAt: "string - ISO timestamp",
                 updatedAt: "string - ISO timestamp",
