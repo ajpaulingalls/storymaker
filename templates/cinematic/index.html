@@ -10,8 +10,8 @@
       @import url("https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Crimson+Pro:wght@300;400;500&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap");
 
       :root {
-        --accent-color: #e50914;
-        --accent-color-alt: #b0070f;
+        --accent-color: #fa9000;
+        --accent-color-alt: #e76f51;
       }
 
       body {
@@ -343,7 +343,7 @@
         if (articleData.isRTL) {
           SC.applyAccentColors(articleData);
         }
-        SC.insertLogo("logo", articleData, articleData.site === "aja" ? undefined : "#e50914");
+        SC.insertLogo("logo", articleData, articleData.site === "aja" ? undefined : "#fa9000");
         SC.setStatusBadge("statusBadge", articleData);
         SC.setText("category", articleData.category);
         SC.setText("location", articleData.location);

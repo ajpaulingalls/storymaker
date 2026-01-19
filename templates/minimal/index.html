@@ -10,8 +10,8 @@
       @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap");
 
       :root {
-        --accent-color: #1a1a1a;
-        --accent-color-alt: #333;
+        --accent-color: #fa9000;
+        --accent-color-alt: #e76f51;
       }
 
       body {
@@ -255,7 +255,7 @@
         if (articleData.isRTL) {
           SC.applyAccentColors(articleData);
         }
-        SC.insertLogo("logo", articleData, articleData.site === "aja" ? undefined : "#1a1a1a");
+        SC.insertLogo("logo", articleData, articleData.site === "aja" ? undefined : "#fa9000");
         SC.setStatusBadge("statusBadge", articleData);
         SC.setText("category", articleData.category || (articleData.isRTL ? "أخبار" : "News"));
         SC.setText("title", articleData.title);
