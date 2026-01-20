@@ -27,7 +27,10 @@
         font-family: "Noto Sans Arabic", "Bebas Neue", sans-serif;
       }
 
-      body.rtl .summary {
+      body.rtl .summary,
+      body.rtl .source-name,
+      body.rtl .date-text,
+      body.rtl .location {
         font-family: "Noto Sans Arabic", "Source Sans 3", sans-serif;
       }
 
@@ -319,15 +322,6 @@
         letter-spacing: 1px;
       }
 
-      .swipe-hint {
-        font-family: "Source Sans 3", sans-serif;
-        font-size: 22px;
-        font-weight: 400;
-        color: rgba(255, 255, 255, 0.5);
-        text-transform: uppercase;
-        letter-spacing: 2px;
-      }
-
       /* Image credit - vertical text */
       .image-credit {
         position: absolute;
@@ -439,7 +433,6 @@
         </div>
         <div class="cta-area">
           <div class="short-url" id="shortUrl"></div>
-          <div class="swipe-hint">Swipe up to read</div>
         </div>
       </div>
     </div>
@@ -494,13 +487,6 @@
         SC.setText("source", articleData.source);
         SC.setDate("date", articleData.date, articleData.locale);
         SC.setText("shortUrl", articleData.shortUrl);
-        
-        // Update swipe hint text for Arabic
-        if (articleData.isRTL) {
-          const swipeHint = document.querySelector(".swipe-hint");
-          if (swipeHint) swipeHint.textContent = "اسحب للقراءة";
-
-        }
 
         // Set background image
         if (articleData.imageUrl) {
