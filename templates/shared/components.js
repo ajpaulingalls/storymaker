@@ -143,6 +143,15 @@ window.StoryComponents = {
   },
 
   /**
+   * Default animateContent function for templates
+   * Most templates use the same 10-second animation duration
+   * @returns {Promise} Resolves after 10 seconds
+   */
+  defaultAnimateContent() {
+    return this.waitForAnimation(10000);
+  },
+
+  /**
    * Generate the Al Jazeera English logo SVG (with text)
    * Aspect ratio: 166:60 (wide)
    * @param {string} accentColor - The accent color for the logo (default: "#fa9000")

@@ -68,6 +68,33 @@ body.rtl .excerpt[style*="border-left"] {
 }
 
 /* ========================================
+   RTL Font Support
+   Uses CSS variables set by each template:
+   --font-arabic, --font-heading, --font-body
+   ======================================== */
+
+body.rtl .excerpt,
+body.rtl .summary,
+body.rtl .source,
+body.rtl .date,
+body.rtl .location,
+body.rtl .source-name,
+body.rtl .date-text,
+body.rtl .category,
+body.rtl .category-pill,
+body.rtl .tag {
+  font-family: var(--font-arabic), var(--font-body), sans-serif;
+}
+
+body.rtl .title,
+body.rtl .headline,
+body.rtl .quote-title,
+body.rtl .quote-text,
+body.rtl .breaking-label {
+  font-family: var(--font-arabic), var(--font-heading), serif;
+}
+
+/* ========================================
    Loading State
    ======================================== */
 
@@ -86,6 +113,7 @@ body.rtl .excerpt[style*="border-left"] {
   width: 80px;
   height: 80px;
   border: 4px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--accent-color);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }

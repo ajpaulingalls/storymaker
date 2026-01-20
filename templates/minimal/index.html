@@ -12,6 +12,9 @@
       :root {
         --accent-color: #fa9000;
         --accent-color-alt: #e76f51;
+        --font-arabic: "Noto Sans Arabic";
+        --font-heading: "DM Serif Display";
+        --font-body: "DM Sans";
       }
 
       body {
@@ -19,22 +22,12 @@
       }
 
       body.rtl {
-        font-family: "Noto Sans Arabic", "DM Sans", sans-serif;
+        font-family: var(--font-arabic), var(--font-body), sans-serif;
       }
 
-      body.rtl .title {
-        font-family: "Noto Sans Arabic", "DM Serif Display", serif;
-      }
-
-      body.rtl .excerpt,
-      body.rtl .source,
-      body.rtl .date {
-        font-family: "Noto Sans Arabic", "DM Sans", sans-serif;
-      }
-
+      /* Light theme needs different spinner border */
       .loading-spinner {
         border-color: rgba(0, 0, 0, 0.1);
-        border-top-color: var(--accent-color);
       }
 
       .loading-text {
@@ -95,7 +88,6 @@
       }
 
       body.rtl .category-pill {
-        font-family: "Noto Sans Arabic", "DM Sans", sans-serif;
         letter-spacing: 0;
         align-self: flex-start;
         margin-left: auto;
@@ -129,7 +121,6 @@
       }
 
       body.rtl .excerpt {
-        font-family: "Noto Sans Arabic", "DM Sans", sans-serif;
         font-size: 38px;
       }
 
@@ -277,12 +268,8 @@
         }
       }
 
-      async function animateContent() {
-        return SC.waitForAnimation(10000);
-      }
-
       document.addEventListener("DOMContentLoaded", () => {
-        window.StoryMaker.initStory({ renderContent, animateContent });
+        window.StoryMaker.initStory({ renderContent });
       });
     </script>
   </body>

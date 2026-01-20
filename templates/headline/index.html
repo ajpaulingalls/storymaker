@@ -12,6 +12,9 @@
       :root {
         --accent-color: #fa9000;
         --accent-color-alt: #e76f51;
+        --font-arabic: "Noto Sans Arabic";
+        --font-heading: "Bebas Neue";
+        --font-body: "Source Sans 3";
       }
 
       body {
@@ -19,24 +22,7 @@
       }
 
       body.rtl {
-        font-family: "Noto Sans Arabic", "Source Sans 3", sans-serif;
-      }
-
-      body.rtl .headline,
-      body.rtl .category {
-        font-family: "Noto Sans Arabic", "Bebas Neue", sans-serif;
-      }
-
-      body.rtl .summary,
-      body.rtl .source-name,
-      body.rtl .date-text,
-      body.rtl .location {
-        font-family: "Noto Sans Arabic", "Source Sans 3", sans-serif;
-      }
-
-      /* Template-specific loading spinner color */
-      .loading-spinner {
-        border-top-color: var(--accent-color);
+        font-family: var(--font-arabic), var(--font-body), sans-serif;
       }
 
       .loading-text {
@@ -199,7 +185,6 @@
       }
 
       body.rtl .tag {
-        font-family: "Noto Sans Arabic", "Source Sans 3", sans-serif;
         letter-spacing: 0;
       }
 
@@ -496,12 +481,8 @@
         }
       }
 
-      async function animateContent() {
-        return SC.waitForAnimation(10000);
-      }
-
       document.addEventListener("DOMContentLoaded", () => {
-        window.StoryMaker.initStory({ renderContent, animateContent });
+        window.StoryMaker.initStory({ renderContent });
       });
     </script>
   </body>

@@ -12,6 +12,9 @@
       :root {
         --accent-color: #ff0033;
         --accent-color-alt: #cc0029;
+        --font-arabic: "Noto Sans Arabic";
+        --font-heading: "Archivo Black";
+        --font-body: "Barlow";
       }
 
       body {
@@ -19,26 +22,12 @@
       }
 
       body.rtl {
-        font-family: "Noto Sans Arabic", "Barlow", sans-serif;
+        font-family: var(--font-arabic), var(--font-body), sans-serif;
       }
 
-      body.rtl .title,
-      body.rtl .breaking-label {
-        font-family: "Noto Sans Arabic", "Archivo Black", sans-serif;
-      }
-
+      /* Breaking uses Barlow Condensed for location (not body font) */
       body.rtl .location {
-        font-family: "Noto Sans Arabic", "Barlow Condensed", sans-serif;
-      }
-
-      body.rtl .excerpt,
-      body.rtl .source,
-      body.rtl .date {
-        font-family: "Noto Sans Arabic", "Barlow", sans-serif;
-      }
-
-      .loading-spinner {
-        border-top-color: var(--accent-color);
+        font-family: var(--font-arabic), "Barlow Condensed", sans-serif;
       }
 
       .loading-text {
@@ -440,12 +429,8 @@
         }
       }
 
-      async function animateContent() {
-        return SC.waitForAnimation(10000);
-      }
-
       document.addEventListener("DOMContentLoaded", () => {
-        window.StoryMaker.initStory({ renderContent, animateContent });
+        window.StoryMaker.initStory({ renderContent });
       });
     </script>
   </body>
