@@ -3,6 +3,13 @@ import { join } from "path";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 
+export interface RecorderProgress {
+  phase: "initializing" | "capturing" | "stitching" | "thumbnail" | "complete";
+  currentFrame?: number;
+  totalFrames?: number;
+  percent: number;
+}
+
 export interface RecorderOptions {
   url: string;
   outputPath: string;
@@ -10,6 +17,7 @@ export interface RecorderOptions {
   height?: number;
   frameRate?: number;
   duration?: number;
+  onProgress?: (progress: RecorderProgress) => void;
 }
 
 export interface RecorderResult {
@@ -69,7 +77,15 @@ export async function recordStory(
     height = 1920,
     frameRate = 25,
     duration = 10000, // 10 seconds default
+    onProgress,
   } = options;
+
+  // Helper to report progress
+  const reportProgress = (progress: RecorderProgress) => {
+    if (onProgress) {
+      onProgress(progress);
+    }
+  };
 
   let browser: Browser | null = null;
   let page: Page | null = null;
@@ -82,6 +98,9 @@ export async function recordStory(
   });
 
   try {
+    // Report initializing
+    reportProgress({ phase: "initializing", percent: 5 });
+
     // Launch browser
     const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
     browser = await puppeteer.launch({
@@ -186,6 +205,9 @@ export async function recordStory(
     console.log(`Starting frame capture: ${totalFrames} frames at ${frameRate}fps`);
     const captureStartTime = Date.now();
 
+    // Report starting capture
+    reportProgress({ phase: "capturing", currentFrame: 0, totalFrames, percent: 10 });
+
     // Capture frames
     for (let frame = 0; frame < totalFrames; frame++) {
       const timeMs = frame * frameInterval;
@@ -202,7 +224,19 @@ export async function recordStory(
         type: "png",
       });
 
-      // Progress logging every 30 frames (1 second)
+      // Progress logging and reporting every 10 frames
+      if (frame % 10 === 0 || frame === totalFrames - 1) {
+        // Frame capture is 10% to 70% of total progress
+        const capturePercent = 10 + Math.round((frame / totalFrames) * 60);
+        reportProgress({ 
+          phase: "capturing", 
+          currentFrame: frame + 1, 
+          totalFrames, 
+          percent: capturePercent 
+        });
+      }
+      
+      // Console logging every 30 frames (1 second)
       if (frame % 30 === 0) {
         const progress = ((frame / totalFrames) * 100).toFixed(0);
         console.log(`Frame capture: ${progress}% (${frame}/${totalFrames})`);
@@ -214,6 +248,7 @@ export async function recordStory(
 
     // Stitch frames into video with FFmpeg
     console.log(`Stitching frames into video: ${outputPath}`);
+    reportProgress({ phase: "stitching", percent: 75 });
     const stitchStartTime = Date.now();
     
     const framePattern = join(tempDir, "frame_%04d.png");
@@ -237,6 +272,7 @@ export async function recordStory(
     const thumbnailPath = outputPath.replace(/\.mp4$/, ".jpg");
     
     console.log(`Generating thumbnail from last frame...`);
+    reportProgress({ phase: "thumbnail", percent: 90 });
     const thumbnailResult = await Bun.$`ffmpeg -y -i ${lastFramePath} -q:v 2 ${thumbnailPath}`;
     
     let finalThumbnailPath: string | undefined;
@@ -249,6 +285,8 @@ export async function recordStory(
 
     const totalDuration = ((Date.now() - captureStartTime) / 1000).toFixed(1);
     console.log(`Total video generation time: ${totalDuration}s`);
+
+    reportProgress({ phase: "complete", percent: 100 });
 
     return {
       success: true,

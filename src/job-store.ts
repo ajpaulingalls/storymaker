@@ -14,6 +14,7 @@ export interface Job {
     template: string;
   };
   progress?: string;
+  progressPercent?: number;
   result?: {
     url: string;
     thumbnailUrl?: string;
@@ -139,6 +140,7 @@ export class AzureTableJobStore implements JobStore {
     status: string;
     request: string;
     progress: string;
+    progressPercent: number;
     result: string;
     error: string;
     createdAt: string;
@@ -150,6 +152,7 @@ export class AzureTableJobStore implements JobStore {
       status: job.status,
       request: JSON.stringify(job.request),
       progress: job.progress || "",
+      progressPercent: job.progressPercent || 0,
       result: job.result ? JSON.stringify(job.result) : "",
       error: job.error || "",
       createdAt: job.createdAt.toISOString(),
@@ -163,6 +166,7 @@ export class AzureTableJobStore implements JobStore {
       status: entity.status as JobStatus,
       request: JSON.parse(entity.request as string),
       progress: (entity.progress as string) || undefined,
+      progressPercent: (entity.progressPercent as number) || undefined,
       result: entity.result ? JSON.parse(entity.result as string) : undefined,
       error: (entity.error as string) || undefined,
       createdAt: new Date(entity.createdAt as string),

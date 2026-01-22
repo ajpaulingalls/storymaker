@@ -167,6 +167,10 @@ jobs:
               AZURE_STORAGE_CONNECTION_STRING="$STORAGE_CONNECTION_STRING" \
               AZURE_STORAGE_CONTAINER="${{ steps.names.outputs.storage_container }}" \
               PUPPETEER_EXECUTABLE_PATH="/usr/bin/chromium" \
+              SOCIAL_PULSE_API_URL="${{ secrets.SOCIAL_PULSE_API_URL }}" \
+              SOCIAL_PULSE_BEARER_TOKEN="${{ secrets.SOCIAL_PULSE_BEARER_TOKEN }}" \
+              SOCIAL_PULSE_ACCOUNT_ID="${{ secrets.SOCIAL_PULSE_ACCOUNT_ID }}" \
+              SOCIAL_PULSE_DATASOURCE_ID="${{ secrets.SOCIAL_PULSE_DATASOURCE_ID }}" \
             --output none
           
           # Enable container logging
