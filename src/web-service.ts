@@ -1273,7 +1273,7 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
             summary: body.summary,
             mediaType: "VIDEO",
             mediaUrl: body.videoUrl,
-            destinationUrl: body.articleUrl,
+            destinationUrl: body.articleUrl + "?z=1",
             dataSourceId: SOCIAL_PULSE_DATASOURCE_ID,
             keywords: body.keywords,
             publishedDate: body.publishedDate || new Date().toISOString(),
