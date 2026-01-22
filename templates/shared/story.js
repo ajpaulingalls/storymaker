@@ -26,8 +26,17 @@ function getSiteConfig(site) {
   return SITE_CONFIG[site] || SITE_CONFIG.aje;
 }
 
-// Get URL parameters
+// Get URL parameters (with debug override support)
 function getParams() {
+  // Check for debug URL params override (from debug server live mode)
+  if (window.DEBUG_URL_PARAMS) {
+    return {
+      site: window.DEBUG_URL_PARAMS.site,
+      postType: window.DEBUG_URL_PARAMS.postType,
+      postSlug: window.DEBUG_URL_PARAMS.postSlug,
+    };
+  }
+  
   const params = new URLSearchParams(window.location.search);
   return {
     site: params.get("site"),
@@ -188,7 +197,7 @@ async function initStory(options = {}) {
         articleData.date = new Date(articleData.date);
       }
     } else {
-      // Normal mode - fetch from API
+      // Normal mode or live debug mode - fetch from API
       const { site, postType, postSlug } = getParams();
 
       console.log("StoryMaker: Starting with params:", { site, postType, postSlug });
@@ -203,6 +212,14 @@ async function initStory(options = {}) {
       
       // Extract and format the data
       articleData = extractArticleData(article, site);
+      
+      // Apply debug flag overrides if present (from debug server live mode)
+      if (window.DEBUG_FLAG_OVERRIDES) {
+        console.log("StoryMaker: Applying debug flag overrides");
+        if (window.DEBUG_FLAG_OVERRIDES.isBreaking) articleData.isBreaking = true;
+        if (window.DEBUG_FLAG_OVERRIDES.isLive) articleData.isLive = true;
+        if (window.DEBUG_FLAG_OVERRIDES.isDeveloping) articleData.isDeveloping = true;
+      }
     }
     
     console.log("StoryMaker: Article data:", articleData.title);

@@ -1,6 +1,7 @@
 import type { Server } from "bun";
 import { join, extname } from "path";
 import { readdirSync } from "fs";
+import { getSiteFromAJLink, getPostTypeFromLink, getSlugFromLink, isShortUrl, expandShortUrl } from "./urlUtils";
 
 const MIME_TYPES: Record<string, string> = {
   ".html": "text/html",
@@ -12,44 +13,11 @@ const MIME_TYPES: Record<string, string> = {
   ".svg": "image/svg+xml",
 };
 
-// Sample article data for debugging
-const SAMPLE_ARTICLES = {
-  aje: {
-    title: "Denmark strengthens ties with Greenland amid Arctic tensions",
-    excerpt: "As geopolitical interest in the Arctic region intensifies, Denmark reaffirms its commitment to Greenland while navigating complex international pressures.",
-    imageUrl: "https://www.aljazeera.com/wp-content/uploads/2026/01/reuters_695e55ea-1767790058.jpg?resize=1920%2C1440",
-    imageCredit: "Reuters",
-    category: "News",
-    location: "Greenland",
-    date: new Date(),
-    source: "Al Jazeera",
-    isBreaking: false,
-    isLive: false,
-    isDeveloping: false,
-    site: "aje",
-    isRTL: false,
-    locale: "en-US",
-    accentColor: "#fa9000",
-    accentColorAlt: "#e76f51",
-  },
-  aja: {
-    title: "التوترات تتصاعد في الشرق الأوسط مع استمرار المفاوضات",
-    excerpt: "تستمر الجهود الدبلوماسية في المنطقة بينما تتصاعد التوترات على عدة جبهات، وسط دعوات دولية للتهدئة والحوار.",
-    imageUrl: "https://www.aljazeera.net/wp-content/uploads/2025/11/epa_691b55dcc357-1763399132.jpg?resize=1920%2C1440",
-    imageCredit: "وكالة الأنباء الأوروبية",
-    category: "أخبار",
-    location: "الشرق الأوسط",
-    date: new Date(),
-    source: "الجزيرة",
-    isBreaking: false,
-    isLive: false,
-    isDeveloping: false,
-    site: "aja",
-    isRTL: true,
-    locale: "ar-SA",
-    accentColor: "#32a2ef",
-    accentColorAlt: "#1a7cc7",
-  },
+// Default content parameters
+const DEFAULT_CONTENT = {
+  site: "aje",
+  postType: "post",
+  slug: "trump-nixes-european-tariff-threats-over-greenland-after-nato-chief-talks",
 };
 
 function getAvailableTemplates(): string[] {
@@ -138,21 +106,6 @@ function generateDebugPage(templates: string[]): string {
     button.secondary:hover {
       background: #1a4a7a;
     }
-    .toggle-group {
-      display: flex;
-      gap: 10px;
-    }
-    .toggle-group button {
-      flex: 1;
-      padding: 8px;
-      font-size: 12px;
-    }
-    .toggle-group button.active {
-      background: #e94560;
-    }
-    .toggle-group button:not(.active) {
-      background: #0f3460;
-    }
     .preview-container {
       margin-left: 300px;
       padding: 20px;
@@ -203,11 +156,31 @@ function generateDebugPage(templates: string[]): string {
       color: #666;
       margin-top: 5px;
     }
+    .error-message {
+      background: #4a1a1a;
+      border: 1px solid #e94560;
+      border-radius: 6px;
+      padding: 10px;
+      margin-top: 10px;
+      font-size: 12px;
+      color: #ff9999;
+      display: none;
+    }
+    .loading-indicator {
+      display: none;
+      text-align: center;
+      padding: 10px;
+      color: #888;
+      font-size: 12px;
+    }
+    .loading-indicator.active {
+      display: block;
+    }
   </style>
 </head>
 <body>
   <div class="debug-panel">
-    <h1>🎬 Story Template Debug</h1>
+    <h1>Story Template Debug</h1>
     
     <h2>Template</h2>
     <div class="control-group">
@@ -216,13 +189,15 @@ function generateDebugPage(templates: string[]): string {
       </select>
     </div>
     
-    <h2>Site / Language</h2>
+    <h2>Content</h2>
     <div class="control-group">
-      <div class="toggle-group">
-        <button id="ajeBtn" class="active" onclick="setSite('aje')">AJE (English)</button>
-        <button id="ajaBtn" onclick="setSite('aja')">AJA (العربية)</button>
-      </div>
+      <label>Article URL</label>
+      <input type="text" id="urlInput" placeholder="Paste Al Jazeera article URL..." value="https://www.aljazeera.com/news/2025/1/21/${DEFAULT_CONTENT.slug}">
+      <button onclick="loadContent()">Load Content</button>
     </div>
+    
+    <div id="errorMessage" class="error-message"></div>
+    <div id="loadingIndicator" class="loading-indicator">Loading content...</div>
     
     <h2>Status Flags</h2>
     <div class="control-group status-flags">
@@ -230,6 +205,7 @@ function generateDebugPage(templates: string[]): string {
       <label><input type="checkbox" id="isLive" onchange="updatePreview()"> Live</label>
       <label><input type="checkbox" id="isDeveloping" onchange="updatePreview()"> Developing</label>
     </div>
+    <p class="info-text">Flags override article data</p>
     
     <h2>Preview Scale</h2>
     <div class="control-group scale-controls">
@@ -240,8 +216,8 @@ function generateDebugPage(templates: string[]): string {
     </div>
     
     <h2>Actions</h2>
-    <button onclick="updatePreview()">🔄 Refresh Preview</button>
-    <button class="secondary" onclick="openInNewTab()">↗️ Open Full Size</button>
+    <button onclick="updatePreview()">Refresh Preview</button>
+    <button class="secondary" onclick="openInNewTab()">Open Full Size</button>
     
     <h2>Current URL</h2>
     <div class="control-group">
@@ -257,19 +233,73 @@ function generateDebugPage(templates: string[]): string {
   </div>
   
   <script>
-    let currentSite = 'aje';
     let currentScale = 0.4;
-    
-    function setSite(site) {
-      currentSite = site;
-      document.getElementById('ajeBtn').classList.toggle('active', site === 'aje');
-      document.getElementById('ajaBtn').classList.toggle('active', site === 'aja');
-      updatePreview();
-    }
+    let currentContent = {
+      site: 'aje',
+      postType: 'post',
+      slug: '${DEFAULT_CONTENT.slug}'
+    };
     
     function setScale(scale) {
       currentScale = scale;
       document.getElementById('previewFrame').style.transform = \`scale(\${scale})\`;
+    }
+    
+    async function loadContent() {
+      const urlInput = document.getElementById('urlInput');
+      const url = urlInput.value.trim();
+      
+      if (!url) {
+        showError('Please enter a URL');
+        return;
+      }
+      
+      clearError();
+      setLoading(true);
+      
+      try {
+        const response = await fetch(\`/api/parse-url?url=\${encodeURIComponent(url)}\`);
+        const data = await response.json();
+        
+        if (data.error) {
+          showError(data.error);
+          setLoading(false);
+          return;
+        }
+        
+        if (!data.slug) {
+          showError('Could not extract slug from URL');
+          setLoading(false);
+          return;
+        }
+        
+        // Store the parsed content
+        currentContent = {
+          site: data.site,
+          postType: data.postType,
+          slug: data.slug
+        };
+        
+        // Load the preview
+        updatePreview();
+      } catch (error) {
+        showError('Failed to load content: ' + error.message);
+        setLoading(false);
+      }
+    }
+    
+    function showError(message) {
+      const errorEl = document.getElementById('errorMessage');
+      errorEl.textContent = message;
+      errorEl.style.display = 'block';
+    }
+    
+    function clearError() {
+      document.getElementById('errorMessage').style.display = 'none';
+    }
+    
+    function setLoading(loading) {
+      document.getElementById('loadingIndicator').classList.toggle('active', loading);
     }
     
     function getPreviewUrl() {
@@ -280,8 +310,9 @@ function generateDebugPage(templates: string[]): string {
       
       const params = new URLSearchParams({
         template,
-        site: currentSite,
-        debug: 'true',
+        site: currentContent.site,
+        postType: currentContent.postType,
+        postSlug: currentContent.slug,
         isBreaking: isBreaking.toString(),
         isLive: isLive.toString(),
         isDeveloping: isDeveloping.toString(),
@@ -291,12 +322,36 @@ function generateDebugPage(templates: string[]): string {
     }
     
     function updatePreview() {
+      clearError();
+      
+      if (!currentContent.slug) {
+        showError('Please load content from a URL first');
+        return;
+      }
+      
+      setLoading(true);
+      
       const url = getPreviewUrl();
-      document.getElementById('previewIframe').src = url;
+      const iframe = document.getElementById('previewIframe');
+      
+      iframe.onload = () => {
+        setLoading(false);
+      };
+      
+      iframe.onerror = () => {
+        setLoading(false);
+        showError('Failed to load preview');
+      };
+      
+      iframe.src = url;
       document.getElementById('currentUrl').value = window.location.origin + url;
     }
     
     function openInNewTab() {
+      if (!currentContent.slug) {
+        showError('Please load content from a URL first');
+        return;
+      }
       window.open(getPreviewUrl(), '_blank');
     }
     
@@ -307,37 +362,14 @@ function generateDebugPage(templates: string[]): string {
     
     document.getElementById('templateSelect').addEventListener('change', updatePreview);
     
+    // Allow Enter key to load content from URL
+    document.getElementById('urlInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') loadContent();
+    });
+    
     // Initial setup
     setScale(currentScale);
-    updatePreview();
-  </script>
-</body>
-</html>`;
-}
-
-function generatePreviewPage(template: string, site: string, flags: { isBreaking: boolean; isLive: boolean; isDeveloping: boolean }): string {
-  const articleData = { ...SAMPLE_ARTICLES[site as keyof typeof SAMPLE_ARTICLES], ...flags };
-  
-  return `<!DOCTYPE html>
-<html lang="${site === 'aja' ? 'ar' : 'en'}" ${site === 'aja' ? 'dir="rtl"' : ''}>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=1080, height=1920">
-  <title>Preview: ${template}</title>
-  <script>
-    // Mock the storyReady and storyDone functions
-    window.storyReady = () => Promise.resolve();
-    window.storyDone = () => Promise.resolve();
-    
-    // Inject mock article data
-    window.DEBUG_ARTICLE_DATA = ${JSON.stringify(articleData, null, 2)};
-  </script>
-</head>
-<body>
-  <script>
-    // Redirect to load the actual template with debug mode
-    const params = new URLSearchParams(window.location.search);
-    window.location.href = '/template/${template}/?debug=true&site=${site}&isBreaking=${flags.isBreaking}&isLive=${flags.isLive}&isDeveloping=${flags.isDeveloping}';
+    loadContent();
   </script>
 </body>
 </html>`;
@@ -358,6 +390,44 @@ export async function startDebugServer(port: number = 3333): Promise<Server> {
 
       console.log(`[Debug] ${req.method} ${pathname}`);
 
+      // API endpoint to parse URLs
+      if (pathname === "/api/parse-url") {
+        const inputUrl = url.searchParams.get("url");
+        if (!inputUrl) {
+          return new Response(JSON.stringify({ error: "Missing url parameter" }), {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+
+        try {
+          // Expand short URL if needed
+          let expandedUrl = inputUrl;
+          if (isShortUrl(inputUrl)) {
+            expandedUrl = await expandShortUrl(inputUrl);
+          }
+
+          const site = getSiteFromAJLink(expandedUrl);
+          const postType = getPostTypeFromLink(expandedUrl);
+          const slug = getSlugFromLink(expandedUrl);
+
+          return new Response(JSON.stringify({
+            site: site || "aje",
+            postType: postType || "post",
+            slug: slug || "",
+            expandedUrl,
+          }), {
+            headers: { "Content-Type": "application/json" },
+          });
+        } catch (error) {
+          console.error("[Debug] Error parsing URL:", error);
+          return new Response(JSON.stringify({ error: "Failed to parse URL" }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+      }
+
       // Serve debug panel at root
       if (pathname === "/" || pathname === "/debug") {
         return new Response(generateDebugPage(templates), {
@@ -368,35 +438,38 @@ export async function startDebugServer(port: number = 3333): Promise<Server> {
       // Handle preview requests
       if (pathname === "/preview") {
         const template = url.searchParams.get("template") || "default";
-        const site = url.searchParams.get("site") || "aje";
+        const site = url.searchParams.get("site") || DEFAULT_CONTENT.site;
+        const postType = url.searchParams.get("postType") || DEFAULT_CONTENT.postType;
+        const postSlug = url.searchParams.get("postSlug") || DEFAULT_CONTENT.slug;
         const flags = {
           isBreaking: url.searchParams.get("isBreaking") === "true",
           isLive: url.searchParams.get("isLive") === "true",
           isDeveloping: url.searchParams.get("isDeveloping") === "true",
         };
 
-        // Serve the template directly with injected debug data
+        // Serve the template directly
         const templatePath = join(templatesDir, template, "index.html");
         const file = Bun.file(templatePath);
 
         if (await file.exists()) {
           let html = await file.text();
           
-          // Get article data
-          const articleData = { 
-            ...SAMPLE_ARTICLES[site as keyof typeof SAMPLE_ARTICLES], 
-            ...flags 
-          };
-
-          // Inject debug script before closing </head>
+          // Inject debug script - mock recording functions and pass content params
           const debugScript = `
   <script>
     // Debug mode - mock recording functions
     window.storyReady = () => Promise.resolve();
     window.storyDone = () => Promise.resolve();
     
-    // Debug mode - inject mock article data
-    window.DEBUG_ARTICLE_DATA = ${JSON.stringify(articleData)};
+    // Debug mode - override URL params for the template
+    window.DEBUG_URL_PARAMS = {
+      site: "${site}",
+      postType: "${postType}",
+      postSlug: "${postSlug}"
+    };
+    
+    // Override status flags if set
+    window.DEBUG_FLAG_OVERRIDES = ${JSON.stringify(flags)};
   </script>
 </head>`;
           
