@@ -72,6 +72,11 @@
         animation: fadeInOverlay 0.5s ease-out 1s forwards;
       }
 
+      /* For aja site (RTL), round top-left corner instead */
+      body.site-aja .overlay {
+        border-radius: 90px 0 0 0; /* Rounded top-left corner */
+      }
+
       @keyframes fadeInOverlay {
         to {
           opacity: 1;
@@ -420,6 +425,8 @@
         // Add site-specific class to body
         if (articleData.site === "aje") {
           document.body.classList.add("site-aje");
+        } else if (articleData.site === "aja") {
+          document.body.classList.add("site-aja");
         }
         
         // Logo image is already in HTML, no JavaScript needed
