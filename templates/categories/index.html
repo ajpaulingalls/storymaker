@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>Story</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="/shared/base.css" />
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=Noto+Sans+Arabic:wght@400;500;600;700;800;900&display=swap");
+
+      :root {
+        --accent-color: #fa9000;
+        --accent-color-alt: #e76f51;
+        --live-updates-color: #BF3640;
+        --headline-highlight-color: #BF3640;
+        --overlay-color: rgba(20, 20, 20, 0.6);
+        --font-arabic: "Noto Sans Arabic";
+        --font-body: "Montserrat";
+      }
+
+      body {
+        background: #0a0a0a;
+        font-family: "Montserrat", sans-serif;
+      }
+
+      body.rtl {
+        font-family: var(--font-arabic), var(--font-body), sans-serif;
+      }
+
+      .loading-text {
+        font-family: "Montserrat", sans-serif;
+      }
+
+      /* Background Image Container - isolate from RTL direction */
+      .bg-image-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        direction: ltr; /* Prevent RTL from affecting image positioning */
+      }
+
+      /* Background Image - Horizontal Pan Effect (middle 2/3rds) */
+      .bg-image {
+        height: 100%;
+        width: auto;
+        opacity: 0;
+        will-change: transform, opacity;
+        animation: fadeInImage 1s ease-out forwards;
+      }
+
+      @keyframes fadeInImage {
+        0% { opacity: 0; }
+        100% { opacity: 1; }
+      }
+
+      @keyframes panLeftToRight {
+        0% { transform: translateX(var(--pan-start)); }
+        100% { transform: translateX(var(--pan-end)); }
+      }
+
+      @keyframes panRightToLeft {
+        0% { transform: translateX(var(--pan-end)); }
+        100% { transform: translateX(var(--pan-start)); }
+      }
+
+      /* Dark overlay covering bottom half - solid semi-transparent box */
+      .overlay {
+        position: absolute;
+        top: 1220px; /* Start around waist/middle level */
+        left: 60px;
+        width: 860px;
+        height: 700px; /* Shorter height */
+        background: var(--overlay-color);
+        border-radius: 0 90px 0 0; /* Rounded top-right corner */
+        opacity: 0;
+        animation: fadeInOverlay 0.5s ease-out 1s forwards;
+      }
+
+      /* For aja site (RTL), round top-left corner instead */
+      body.site-aja .overlay {
+        border-radius: 90px 0 0 0; /* Rounded top-left corner */
+      }
+
+      @keyframes fadeInOverlay {
+        to {
+          opacity: 1;
+        }
+      }
+
+      /* Al Jazeera Logo - top-left */
+      .logo-area {
+        position: absolute;
+        top: 60px;
+        left: 80px;
+        z-index: 20;
+        opacity: 0;
+        animation: fadeIn 0.6s ease-out 0.5s forwards;
+      }
+
+      .logo-image {
+        width: 200px;
+        height: auto;
+        display: block;
+      }
+
+      body.rtl .logo-area {
+        left: auto;
+        right: 80px;
+      }
+
+      /* Location Indicator - top-right, aligned with logo text */
+      .location-indicator {
+        position: absolute;
+        top: 192px; /* Aligned with logo text: 60px (logo top) + 120px (icon height) + 12px (gap) */
+        right: 80px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        z-index: 20;
+        opacity: 0;
+        animation: fadeIn 0.6s ease-out 0.8s forwards;
+      }
+
+      body.rtl .location-indicator {
+        right: auto;
+        left: 80px;
+        flex-direction: row-reverse;
+      }
+
+      .location-text {
+        font-family: "Montserrat", sans-serif;
+        font-size: 28px;
+        font-weight: 300;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: white;
+      }
+
+      body.rtl .location-text {
+        letter-spacing: 0;
+        font-family: var(--font-arabic), var(--font-body), sans-serif;
+      }
+
+      .location-pin {
+        width: 36px;
+        height: 36px;
+        fill: white;
+      }
+
+
+      /* Content wrapper for LIVE UPDATES and headline */
+      .content-wrapper {
+        position: absolute;
+        top: 1180px;
+        left: 100px;
+        right: 100px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        z-index: 20;
+      }
+
+      body.rtl .content-wrapper {
+        left: auto;
+        right: 80px;
+      }
+
+      /* LIVE UPDATES Tag */
+      .live-updates-tag {
+        opacity: 0;
+        transform: translateX(-30px);
+        animation: slideRight 0.5s ease-out 1.5s forwards;
+      }
+
+      body.rtl .live-updates-tag {
+        transform: translateX(30px);
+        direction: ltr; /* Keep text direction LTR for LIVE UPDATES tag */
+        animation: slideLeft 0.5s ease-out 1.5s forwards;
+      }
+
+      @keyframes slideLeft {
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      .live-updates-box {
+        display: inline-block;
+        background: white;
+        color: var(--live-updates-color);
+        padding: 5px 15px;
+        font-family: "Montserrat", sans-serif;
+        font-size: 60px;
+        font-weight: 800; /* Extra bold */
+        text-transform: uppercase;
+        letter-spacing: 3px;
+      }
+
+      body.rtl .live-updates-box {
+        letter-spacing: 0;
+        font-family: var(--font-arabic), var(--font-body), sans-serif;
+      }
+
+      /* Main Content Area */
+      .content {
+        padding: 0;
+        z-index: 20;
+      }
+
+      body.rtl .content {
+        direction: rtl;
+        text-align: right;
+      }
+
+      /* Headline */
+      .headline {
+        font-family: "Montserrat", sans-serif;
+        font-size: 76px;
+        font-weight: 800; /* Extra bold */
+        line-height: 1.15;
+        color: white;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 30px;
+        max-width: 920px;
+        opacity: 0;
+        transform: translateY(40px);
+        animation: slideUp 0.8s ease-out 2s forwards;
+      }
+
+      body.rtl .headline {
+        letter-spacing: 0;
+        font-family: var(--font-arabic), var(--font-body), sans-serif;
+        text-transform: none;
+      }
+
+      .headline-word {
+        display: inline-block;
+        margin-right: 0.15em;
+        white-space: pre;
+      }
+
+      .headline .headline-word.highlight {
+        color: var(--headline-highlight-color) !important;
+      }
+
+      /* Opinion category - smaller headline and author info */
+      body.category-opinion .headline {
+        font-size: 64px;
+      }
+
+      .author-info {
+        margin-top: 20px;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: slideUp 0.6s ease-out 2.5s forwards;
+      }
+
+      .author-name {
+        font-family: "Montserrat", sans-serif;
+        font-size: 48px;
+        font-weight: 600;
+        color: white;
+        margin-bottom: 8px;
+      }
+
+      .author-job-title {
+        font-family: "Montserrat", sans-serif;
+        font-size: 28px;
+        font-weight: 400;
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      /* Status badge - hidden, we use custom LIVE UPDATES tag */
+      .status-badge {
+        display: none !important;
+      }
+
+      /* Image credit */
+      .image-credit {
+        position: absolute;
+        bottom: 40px;
+        right: 80px;
+        font-family: "Montserrat", sans-serif;
+        font-size: 20px;
+        color: rgba(255, 255, 255, 0.5);
+        opacity: 0;
+        animation: fadeIn 0.5s ease-out 3s forwards;
+        z-index: 20;
+      }
+
+      body.rtl .image-credit {
+        right: auto;
+        left: 80px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Loading State -->
+    <div class="loading-container" id="loading">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Loading story...</div>
+    </div>
+
+    <!-- Background Image -->
+    <div class="bg-image-container">
+      <img class="bg-image" id="bgImage" alt="" />
+    </div>
+
+    <!-- Overlay -->
+    <div class="overlay"></div>
+
+    <!-- Al Jazeera Logo -->
+    <div class="logo-area">
+      <img class="logo-image" id="logoImage" src="/shared/images/ajeWhite.png" alt="Al Jazeera" />
+    </div>
+
+    <!-- Location Indicator -->
+    <div class="location-indicator">
+      <div class="location-text" id="location"></div>
+      <svg class="location-pin" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+      </svg>
+    </div>
+
+    <!-- Content Wrapper (LIVE UPDATES + Headline) -->
+    <div class="content-wrapper">
+      <!-- LIVE UPDATES Tag -->
+      <div class="live-updates-tag">
+        <div class="live-updates-box" id="liveUpdatesTag">LIVE UPDATES</div>
+      </div>
+
+      <!-- Main Content -->
+      <div class="content">
+        <h1 class="headline" id="headline"></h1>
+        <div class="author-info" id="authorInfo" style="display: none;">
+          <div class="author-name" id="authorName"></div>
+          <div class="author-job-title" id="authorJobTitle"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Image Credit -->
+    <div class="image-credit" id="imageCredit"></div>
+
+    <script src="/shared/story.js"></script>
+    <script src="/shared/components.js"></script>
+    <script>
+      const SC = window.StoryComponents;
+
+      /**
+       * Parse headline and highlight key words
+       * Looks for action words, important verbs, and critical terms
+       */
+      function parseHeadline(text) {
+        const words = text.split(' ');
+        // Common words to highlight in live updates (action words, critical terms)
+        const highlightedWords = [
+          'SHELTER', 'SHELT', 'URGES', 'URGE', 'WARNS', 'WARN', 'ALERTS', 'ALERT',
+          'BREAKING', 'CRITICAL', 'IMMEDIATE', 'EVACUATE', 'EVACUATION',
+          'ATTACK', 'ATTACKED', 'BOMB', 'BOMBING', 'STRIKE', 'STRIKES',
+          'DEATH', 'DEATHS', 'KILLED', 'INJURED', 'CASUALTIES'
+        ];
+        
+        const parsedWords = words.map(word => {
+          // Remove punctuation for matching
+          const cleanWord = word.toUpperCase().replace(/[^\w]/g, '');
+          const isHighlighted = highlightedWords.some(hw => 
+            cleanWord === hw || cleanWord.startsWith(hw) || cleanWord.includes(hw)
+          );
+          return {
+            text: word,
+            highlight: isHighlighted
+          };
+        });
+        
+        // Ensure at least one word is highlighted (highlight longest word if none match)
+        const hasHighlight = parsedWords.some(w => w.highlight);
+        if (!hasHighlight && parsedWords.length > 0) {
+          // Find the longest word (by character length, excluding punctuation)
+          let longestIndex = 0;
+          let longestLength = parsedWords[0].text.replace(/[^\w]/g, '').length;
+          
+          parsedWords.forEach((word, index) => {
+            const cleanLength = word.text.replace(/[^\w]/g, '').length;
+            if (cleanLength > longestLength) {
+              longestLength = cleanLength;
+              longestIndex = index;
+            }
+          });
+          
+          parsedWords[longestIndex].highlight = true;
+        }
+        
+        return parsedWords;
+      }
+
+      /**
+       * Render headline with highlighted words
+       */
+      function renderHeadline(text, container, isRTL = false) {
+        if (!text || !container) return;
+        
+        const words = parseHeadline(text);
+        container.innerHTML = '';
+        
+        // For RTL, reverse the word order
+        const wordsToRender = isRTL ? [...words].reverse() : words;
+        
+        wordsToRender.forEach((word, index) => {
+          const span = document.createElement('span');
+          const classes = ['headline-word'];
+          if (word.highlight) {
+            classes.push('highlight');
+          }
+          span.className = classes.join(' ');
+          
+          // For RTL, add space before word (except first), for LTR add space after (except last)
+          if (isRTL) {
+            span.textContent = (index > 0 ? ' ' : '') + word.text;
+          } else {
+            span.textContent = word.text + (index < wordsToRender.length - 1 ? ' ' : '');
+          }
+          container.appendChild(span);
+        });
+      }
+
+      async function renderContent(articleData) {
+        SC.hideLoading();
+        SC.applyAccentColors(articleData);
+        
+        // Add site-specific class to body
+        if (articleData.site === "aje") {
+          document.body.classList.add("site-aje");
+        } else if (articleData.site === "aja") {
+          document.body.classList.add("site-aja");
+        }
+        
+        // Logo image is already in HTML, no JavaScript needed
+        
+        // Set location
+        SC.setText("location", articleData.location || articleData.category || "");
+        
+        // Set LIVE UPDATES tag text and colors based on article status and category
+        const liveUpdatesTag = document.getElementById("liveUpdatesTag");
+        let tagText = "";
+        let tagColor = "#BF3640"; // Default live-updates-color
+        let highlightColor = "#BF3640"; // Default headline highlight color
+        let overlayColor = "rgba(20, 20, 20, 0.6)"; // Default overlay color
+        
+        // Check flags first (priority)
+        if (articleData.isRTL) {
+          if (articleData.isLive) {
+            tagText = "مباشر";
+          } else if (articleData.isBreaking) {
+            tagText = "عاجل";
+          } else if (articleData.isDeveloping) {
+            tagText = "متابعة";
+          }
+        } else {
+          if (articleData.isLive) {
+            tagText = "LIVE";
+          } else if (articleData.isBreaking) {
+            tagText = "BREAKING";
+          } else if (articleData.isDeveloping) {
+            tagText = "DEVELOPING";
+          }
+        }
+        
+        // If no flags set, check categories
+        if (!tagText) {
+          let categorySlug = null;
+          let categoryName = null;
+          
+          // Check if categories array exists and find matching category
+          if (articleData.categories && Array.isArray(articleData.categories)) {
+            const categoryMatch = articleData.categories.find(cat => {
+              const slug = cat.slug ? cat.slug.toLowerCase() : null;
+              return slug === "sports" || slug === "economy" || slug === "opinion";
+            });
+            if (categoryMatch) {
+              categorySlug = categoryMatch.slug ? categoryMatch.slug.toLowerCase() : null;
+              categoryName = categoryMatch.title || categoryMatch.name || null;
+            }
+          }
+          
+          // Fallback: check if category string matches
+          if (!categorySlug && articleData.category) {
+            const categoryLower = articleData.category.toLowerCase();
+            if (categoryLower === "sports" || categoryLower.includes("sports")) {
+              categorySlug = "sports";
+              categoryName = articleData.category;
+            } else if (categoryLower === "economy" || categoryLower.includes("economy")) {
+              categorySlug = "economy";
+              categoryName = articleData.category;
+            } else if (categoryLower === "opinion" || categoryLower.includes("opinion")) {
+              categorySlug = "opinion";
+              categoryName = articleData.category;
+            }
+          }
+          
+          // Apply category-specific styling
+          if (categorySlug === "sports") {
+            tagText = categoryName ? categoryName.toUpperCase() : "SPORTS";
+            tagColor = "#003f47";
+            highlightColor = "#00d883";
+            overlayColor = "rgba(0, 63, 71, 0.6)"; // Sports teal with 60% opacity
+          } else if (categorySlug === "economy") {
+            tagText = categoryName ? categoryName.toUpperCase() : "ECONOMY";
+            tagColor = "#02148f";
+            highlightColor = "#3787ff";
+            overlayColor = "rgba(2, 20, 143, 0.6)"; // Economy blue with 60% opacity
+          } else if (categorySlug === "opinion") {
+            tagText = categoryName ? categoryName.toUpperCase() : "OPINION";
+            tagColor = "#251069";
+            highlightColor = "#f84653";
+            overlayColor = "rgba(91, 16, 130, 0.6)"; // Opinion purple with 60% opacity
+            // Add class to body for opinion-specific styling
+            document.body.classList.add("category-opinion");
+          } else {
+            // Default if no category match
+            tagText = articleData.isRTL ? "تحديثات مباشرة" : "LIVE UPDATES";
+          }
+        }
+        
+        // Set the text
+        liveUpdatesTag.textContent = tagText;
+        
+        // Apply colors via CSS variables
+        document.documentElement.style.setProperty("--live-updates-color", tagColor);
+        document.documentElement.style.setProperty("--headline-highlight-color", highlightColor);
+        document.documentElement.style.setProperty("--overlay-color", overlayColor);
+        
+        // Render headline with highlighting
+        renderHeadline(articleData.title, document.getElementById("headline"), articleData.isRTL);
+        
+        // Show author info for opinion category
+        const authorInfo = document.getElementById("authorInfo");
+        if (document.body.classList.contains("category-opinion") && articleData.authors && articleData.authors.length > 0) {
+          const firstAuthor = articleData.authors[0];
+          const authorNameEl = document.getElementById("authorName");
+          const authorJobTitleEl = document.getElementById("authorJobTitle");
+          
+          if (authorNameEl && firstAuthor.name) {
+            authorNameEl.textContent = firstAuthor.name;
+          }
+          if (authorJobTitleEl && firstAuthor.jobTitle) {
+            authorJobTitleEl.textContent = firstAuthor.jobTitle;
+          }
+          if (authorInfo) {
+            authorInfo.style.display = "block";
+          }
+        }
+        
+        // Set image credit
+        SC.setImageCredit("imageCredit", articleData.imageCredit, articleData.isRTL);
+
+        // Set background image and setup pan animation (middle 2/3rds)
+        if (articleData.imageUrl) {
+          const bgImage = document.getElementById("bgImage");
+          bgImage.src = articleData.imageUrl;
+          
+          await new Promise((resolve) => {
+            bgImage.onload = () => {
+              const viewportWidth = 1080;
+              const imageWidth = bgImage.offsetWidth;
+              
+              // Calculate pan positions for middle 2/3rds of image
+              // Start: show left edge of middle 2/3rds (at W/6)
+              // End: show right edge of middle 2/3rds (at 5W/6 - viewportWidth)
+              const panStart = -imageWidth / 6;
+              const panEnd = -(5 * imageWidth / 6 - viewportWidth);
+              
+              bgImage.style.setProperty("--pan-start", `${panStart}px`);
+              bgImage.style.setProperty("--pan-end", `${panEnd}px`);
+              
+              // For RTL (Arabic), pan from right to left - start positioned at right side
+              const panAnimation = articleData.isRTL ? "panRightToLeft" : "panLeftToRight";
+              if (articleData.isRTL) {
+                // Set initial position to show right side of middle 2/3rds before animation starts
+                bgImage.style.transform = `translateX(${panEnd}px)`;
+              } else {
+                // Set initial position to show left side of middle 2/3rds
+                bgImage.style.transform = `translateX(${panStart}px)`;
+              }
+              
+              setTimeout(() => {
+                bgImage.style.animation = `fadeInImage 0.5s ease-out forwards, ${panAnimation} 11s linear forwards`;
+              }, 100);
+              resolve();
+            };
+            bgImage.onerror = resolve;
+          });
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        window.StoryMaker.initStory({ renderContent });
+      });
+    </script>
+  </body>
+</html>
