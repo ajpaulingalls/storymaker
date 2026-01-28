@@ -131,6 +131,8 @@ function extractArticleData(article, site) {
     imageCredit: article.featuredImage?.credit || '',
     imageAlt: article.featuredImage?.alt || '',
     category: article.primaryCategoryTermName || '',
+    categories: article.categories || article.categoryTerms || null,
+    authors: article.author || null,
     location: article.primaryWhereTermName || '',
     date: article.date ? new Date(article.date) : null,
     source: article.source?.[0]?.name || article.writeInAuthor || (config.isRTL ? 'الجزيرة' : 'Al Jazeera'),

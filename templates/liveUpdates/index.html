@@ -13,6 +13,8 @@
         --accent-color: #fa9000;
         --accent-color-alt: #e76f51;
         --live-updates-color: #BF3640;
+        --headline-highlight-color: #BF3640;
+        --overlay-color: rgba(20, 20, 20, 0.6);
         --font-arabic: "Noto Sans Arabic";
         --font-body: "Montserrat";
       }
@@ -30,33 +32,32 @@
         font-family: "Montserrat", sans-serif;
       }
 
-      /* Background Image */
-      .bg-image-container {
-        direction: ltr;
-      }
-
-      /* Background Image - Horizontal Pan Effect */
+      /* Background Image - Ken Burns Zoom Effect */
       .bg-image {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
         height: 100%;
-        width: auto;
+        background-size: cover;
+        background-position: center;
         opacity: 0;
-        will-change: transform, opacity;
-        animation: fadeInImage 1s ease-out forwards;
+        transform: scale(1);
+        animation: kenBurns 10s ease-out forwards;
       }
 
-      @keyframes fadeInImage {
-        0% { opacity: 0; }
-        100% { opacity: 1; }
-      }
-
-      @keyframes panLeftToRight {
-        0% { transform: translateX(0); }
-        100% { transform: translateX(var(--pan-distance)); }
-      }
-
-      @keyframes panRightToLeft {
-        0% { transform: translateX(var(--pan-distance)); }
-        100% { transform: translateX(0); }
+      @keyframes kenBurns {
+        0% {
+          opacity: 0;
+          transform: scale(1);
+        }
+        5% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1.15);
+        }
       }
 
       /* Dark overlay covering bottom half - solid semi-transparent box */
@@ -66,7 +67,7 @@
         left: 60px;
         width: 860px;
         height: 700px; /* Shorter height */
-        background: rgba(20, 20, 20, 0.8); /* Dark, desaturated gray with ~80% opacity */
+        background: var(--overlay-color);
         border-radius: 0 90px 0 0; /* Rounded top-right corner */
         opacity: 0;
         animation: fadeInOverlay 0.5s ease-out 1s forwards;
@@ -143,30 +144,6 @@
         fill: white;
       }
 
-      /* Source Watermark - vertical text on left edge */
-      .source-watermark {
-        position: absolute;
-        left: 80px;
-        top: 640px; /* Approximately 1/3 down from top */
-        writing-mode: vertical-rl;
-        text-orientation: mixed;
-        font-family: "Montserrat", sans-serif;
-        font-size: 24px;
-        font-weight: 400;
-        color: white;
-        letter-spacing: 4px;
-        opacity: 0;
-        animation: fadeIn 0.6s ease-out 1s forwards;
-        z-index: 15;
-        text-transform: uppercase;
-      }
-
-      body.rtl .source-watermark {
-        left: auto;
-        right: 80px;
-        letter-spacing: 0;
-        font-family: var(--font-arabic), var(--font-body), sans-serif;
-      }
 
       /* Content wrapper for LIVE UPDATES and headline */
       .content-wrapper {
@@ -262,7 +239,34 @@
       }
 
       .headline .headline-word.highlight {
-        color: var(--live-updates-color) !important;
+        color: var(--headline-highlight-color) !important;
+      }
+
+      /* Opinion category - smaller headline and author info */
+      body.category-opinion .headline {
+        font-size: 64px;
+      }
+
+      .author-info {
+        margin-top: 20px;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: slideUp 0.6s ease-out 2.5s forwards;
+      }
+
+      .author-name {
+        font-family: "Montserrat", sans-serif;
+        font-size: 48px;
+        font-weight: 600;
+        color: white;
+        margin-bottom: 8px;
+      }
+
+      .author-job-title {
+        font-family: "Montserrat", sans-serif;
+        font-size: 28px;
+        font-weight: 400;
+        color: rgba(255, 255, 255, 0.9);
       }
 
       /* Status badge - hidden, we use custom LIVE UPDATES tag */
@@ -297,9 +301,7 @@
     </div>
 
     <!-- Background Image -->
-    <div class="bg-image-container">
-      <img class="bg-image" id="bgImage" alt="" />
-    </div>
+    <div class="bg-image" id="bgImage"></div>
 
     <!-- Overlay -->
     <div class="overlay"></div>
@@ -317,9 +319,6 @@
       </svg>
     </div>
 
-    <!-- Source Watermark -->
-    <div class="source-watermark" id="sourceWatermark"></div>
-
     <!-- Content Wrapper (LIVE UPDATES + Headline) -->
     <div class="content-wrapper">
       <!-- LIVE UPDATES Tag -->
@@ -330,6 +329,10 @@
       <!-- Main Content -->
       <div class="content">
         <h1 class="headline" id="headline"></h1>
+        <div class="author-info" id="authorInfo" style="display: none;">
+          <div class="author-name" id="authorName"></div>
+          <div class="author-job-title" id="authorJobTitle"></div>
+        </div>
       </div>
     </div>
 
@@ -431,68 +434,128 @@
         
         // Logo image is already in HTML, no JavaScript needed
         
-        // Set source watermark
-        const sourceWatermark = document.getElementById("sourceWatermark");
-        if (sourceWatermark && articleData.source) {
-          sourceWatermark.textContent = articleData.source.toUpperCase();
-        }
-        
         // Set location
         SC.setText("location", articleData.location || articleData.category || "");
         
-        // Set LIVE UPDATES tag text based on article status
+        // Set LIVE UPDATES tag text and colors based on article status and category
         const liveUpdatesTag = document.getElementById("liveUpdatesTag");
+        let tagText = "";
+        let tagColor = "#BF3640"; // Default live-updates-color
+        let highlightColor = "#BF3640"; // Default headline highlight color
+        let overlayColor = "rgba(20, 20, 20, 0.6)"; // Default overlay color
+        
+        // Check flags first (priority)
         if (articleData.isRTL) {
           if (articleData.isLive) {
-            liveUpdatesTag.textContent = "مباشر";
+            tagText = "مباشر";
           } else if (articleData.isBreaking) {
-            liveUpdatesTag.textContent = "عاجل";
+            tagText = "عاجل";
           } else if (articleData.isDeveloping) {
-            liveUpdatesTag.textContent = "متابعة";
-          } else {
-            liveUpdatesTag.textContent = "تحديثات مباشرة";
+            tagText = "متابعة";
           }
         } else {
           if (articleData.isLive) {
-            liveUpdatesTag.textContent = "LIVE";
+            tagText = "LIVE";
           } else if (articleData.isBreaking) {
-            liveUpdatesTag.textContent = "BREAKING";
+            tagText = "BREAKING";
           } else if (articleData.isDeveloping) {
-            liveUpdatesTag.textContent = "DEVELOPING";
-          } else {
-            liveUpdatesTag.textContent = "LIVE UPDATES";
+            tagText = "DEVELOPING";
           }
         }
+        
+        // If no flags set, check categories
+        if (!tagText) {
+          let categorySlug = null;
+          let categoryName = null;
+          
+          // Check if categories array exists and find matching category
+          if (articleData.categories && Array.isArray(articleData.categories)) {
+            const categoryMatch = articleData.categories.find(cat => {
+              const slug = cat.slug ? cat.slug.toLowerCase() : null;
+              return slug === "sports" || slug === "economy" || slug === "opinion";
+            });
+            if (categoryMatch) {
+              categorySlug = categoryMatch.slug ? categoryMatch.slug.toLowerCase() : null;
+              categoryName = categoryMatch.title || categoryMatch.name || null;
+            }
+          }
+          
+          // Fallback: check if category string matches
+          if (!categorySlug && articleData.category) {
+            const categoryLower = articleData.category.toLowerCase();
+            if (categoryLower === "sports" || categoryLower.includes("sports")) {
+              categorySlug = "sports";
+              categoryName = articleData.category;
+            } else if (categoryLower === "economy" || categoryLower.includes("economy")) {
+              categorySlug = "economy";
+              categoryName = articleData.category;
+            } else if (categoryLower === "opinion" || categoryLower.includes("opinion")) {
+              categorySlug = "opinion";
+              categoryName = articleData.category;
+            }
+          }
+          
+          // Apply category-specific styling
+          if (categorySlug === "sports") {
+            tagText = categoryName ? categoryName.toUpperCase() : "SPORTS";
+            tagColor = "#003f47";
+            highlightColor = "#00d883";
+            overlayColor = "rgba(0, 63, 71, 0.6)"; // Sports teal with 60% opacity
+          } else if (categorySlug === "economy") {
+            tagText = categoryName ? categoryName.toUpperCase() : "ECONOMY";
+            tagColor = "#02148f";
+            highlightColor = "#3787ff";
+            overlayColor = "rgba(2, 20, 143, 0.6)"; // Economy blue with 60% opacity
+          } else if (categorySlug === "opinion") {
+            tagText = categoryName ? categoryName.toUpperCase() : "OPINION";
+            tagColor = "#251069";
+            highlightColor = "#f84653";
+            overlayColor = "rgba(91, 16, 130, 0.6)"; // Opinion purple with 60% opacity
+            // Add class to body for opinion-specific styling
+            document.body.classList.add("category-opinion");
+          } else {
+            // Default if no category match
+            tagText = articleData.isRTL ? "تحديثات مباشرة" : "LIVE UPDATES";
+          }
+        }
+        
+        // Set the text
+        liveUpdatesTag.textContent = tagText;
+        
+        // Apply colors via CSS variables
+        document.documentElement.style.setProperty("--live-updates-color", tagColor);
+        document.documentElement.style.setProperty("--headline-highlight-color", highlightColor);
+        document.documentElement.style.setProperty("--overlay-color", overlayColor);
         
         // Render headline with highlighting
         renderHeadline(articleData.title, document.getElementById("headline"), articleData.isRTL);
         
+        // Show author info for opinion category
+        const authorInfo = document.getElementById("authorInfo");
+        if (document.body.classList.contains("category-opinion") && articleData.authors && articleData.authors.length > 0) {
+          const firstAuthor = articleData.authors[0];
+          const authorNameEl = document.getElementById("authorName");
+          const authorJobTitleEl = document.getElementById("authorJobTitle");
+          
+          if (authorNameEl && firstAuthor.name) {
+            authorNameEl.textContent = firstAuthor.name;
+          }
+          if (authorJobTitleEl && firstAuthor.jobTitle) {
+            authorJobTitleEl.textContent = firstAuthor.jobTitle;
+          }
+          if (authorInfo) {
+            authorInfo.style.display = "block";
+          }
+        }
+        
         // Set image credit
         SC.setImageCredit("imageCredit", articleData.imageCredit, articleData.isRTL);
 
-        // Set background image and setup pan animation
+        // Set background image with Ken Burns effect
         if (articleData.imageUrl) {
           const bgImage = document.getElementById("bgImage");
-          bgImage.src = articleData.imageUrl;
-          
-          await new Promise((resolve) => {
-            bgImage.onload = () => {
-              const viewportWidth = 1080;
-              const panDistance = -(bgImage.offsetWidth - viewportWidth);
-              bgImage.style.setProperty("--pan-distance", `${panDistance}px`);
-              // For RTL (Arabic), pan from right to left - start positioned at right side
-              const panAnimation = articleData.isRTL ? "panRightToLeft" : "panLeftToRight";
-              if (articleData.isRTL) {
-                // Set initial position to show right side of image before animation starts
-                bgImage.style.transform = `translateX(${panDistance}px)`;
-              }
-              setTimeout(() => {
-                bgImage.style.animation = `fadeInImage 0.5s ease-out forwards, ${panAnimation} 10s linear forwards`;
-              }, 100);
-              resolve();
-            };
-            bgImage.onerror = resolve;
-          });
+          bgImage.style.backgroundImage = `url('${articleData.imageUrl}')`;
+          await SC.loadImage(articleData.imageUrl);
         }
       }
 
