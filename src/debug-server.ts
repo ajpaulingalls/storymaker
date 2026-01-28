@@ -121,11 +121,21 @@ function generateDebugPage(templates: string[]): string {
       border-radius: 8px;
       overflow: hidden;
       background: #000;
+      display: block;
+      box-sizing: content-box;
+      padding: 0;
+      margin: 0;
+      position: relative;
+      flex-shrink: 0;
     }
     iframe {
       width: 100%;
       height: 100%;
       border: none;
+      display: block;
+      padding: 0;
+      margin: 0;
+      box-sizing: border-box;
     }
     .scale-controls {
       display: flex;
@@ -214,6 +224,7 @@ function generateDebugPage(templates: string[]): string {
       <button onclick="setScale(0.5)">50%</button>
       <button onclick="setScale(0.6)">60%</button>
     </div>
+    <p class="info-text">Recording size: 1080×1920 (9:16 portrait)</p>
     
     <h2>Actions</h2>
     <button onclick="updatePreview()">Refresh Preview</button>
@@ -228,7 +239,7 @@ function generateDebugPage(templates: string[]): string {
   
   <div class="preview-container">
     <div class="preview-frame" id="previewFrame">
-      <iframe id="previewIframe"></iframe>
+      <iframe id="previewIframe" width="1080" height="1920"></iframe>
     </div>
   </div>
   
@@ -333,6 +344,12 @@ function generateDebugPage(templates: string[]): string {
       
       const url = getPreviewUrl();
       const iframe = document.getElementById('previewIframe');
+      
+      // Explicitly set iframe dimensions
+      iframe.width = '1080';
+      iframe.height = '1920';
+      iframe.style.width = '1080px';
+      iframe.style.height = '1920px';
       
       iframe.onload = () => {
         setLoading(false);

@@ -95,6 +95,11 @@ function generateStoryMakerPage(templates: string[]): string {
       color: #666;
       margin-bottom: 20px;
     }
+    .info-text {
+      font-size: 11px;
+      color: #666;
+      margin-top: 5px;
+    }
     h2 {
       font-size: 14px;
       margin: 20px 0 10px;
@@ -158,11 +163,21 @@ function generateStoryMakerPage(templates: string[]): string {
       border-radius: 8px;
       overflow: hidden;
       background: #000;
+      display: block;
+      box-sizing: content-box;
+      padding: 0;
+      margin: 0;
+      position: relative;
+      flex-shrink: 0;
     }
     iframe {
       width: 100%;
       height: 100%;
       border: none;
+      display: block;
+      padding: 0;
+      margin: 0;
+      box-sizing: border-box;
     }
     .error-message {
       background: #4a1a1a;
@@ -229,6 +244,7 @@ function generateStoryMakerPage(templates: string[]): string {
   <div class="control-panel">
     <h1>StoryMaker</h1>
     <p class="subtitle">Video Story Generator</p>
+    <p class="info-text" style="margin-top: -10px; margin-bottom: 20px;">Recording: 1080×1920 (9:16 portrait)</p>
     
     <h2>Template</h2>
     <div class="control-group">
@@ -261,7 +277,7 @@ function generateStoryMakerPage(templates: string[]): string {
   
   <div class="preview-container">
     <div class="preview-frame" id="previewFrame">
-      <iframe id="previewIframe"></iframe>
+      <iframe id="previewIframe" width="1080" height="1920"></iframe>
     </div>
   </div>
   
@@ -354,6 +370,12 @@ function generateStoryMakerPage(templates: string[]): string {
       
       const url = getPreviewUrl();
       const iframe = document.getElementById('previewIframe');
+      
+      // Explicitly set iframe dimensions
+      iframe.width = '1080';
+      iframe.height = '1920';
+      iframe.style.width = '1080px';
+      iframe.style.height = '1920px';
       
       iframe.onload = () => {
         setLoading(false);
