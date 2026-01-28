@@ -134,6 +134,7 @@ function extractArticleData(article, site) {
     categories: article.categories || article.categoryTerms || null,
     authors: article.author || null,
     location: article.primaryWhereTermName || '',
+    tag: article.primaryTagsTermName || '',
     date: article.date ? new Date(article.date) : null,
     source: article.source?.[0]?.name || article.writeInAuthor || (config.isRTL ? 'الجزيرة' : 'Al Jazeera'),
     isBreaking: article.isBreaking || false,

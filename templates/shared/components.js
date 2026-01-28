@@ -72,7 +72,7 @@ window.StoryComponents = {
   getBasicTags(articleData) {
     const tags = [];
     if (articleData.category) tags.push(articleData.category);
-    if (articleData.location) tags.push(articleData.location);
+    if (articleData.tag) tags.push(articleData.tag);
     return tags;
   },
 
