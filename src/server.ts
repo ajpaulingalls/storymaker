@@ -38,7 +38,7 @@ export function buildTemplateUrl(port: number, options: TemplateServerOptions): 
  * Templates are accessed via /{template-name}/ path.
  * @param port - Port to listen on (default: 3456 for internal use)
  */
-export async function startPersistentServer(port: number = 3456): Promise<Server> {
+export async function startPersistentServer(port: number = 3456): Promise<Server<unknown>> {
   const templatesDir = join(import.meta.dir, "..", "templates");
   console.log(`[Template Server] Templates directory: ${templatesDir}`);
 
@@ -101,7 +101,7 @@ export async function startPersistentServer(port: number = 3456): Promise<Server
  * Template is served at the root path /.
  */
 export async function startServer(options: TemplateServerOptions): Promise<{
-  server: Server;
+  server: Server<unknown>;
   url: string;
 }> {
   const templatesDir = join(import.meta.dir, "..", "templates");
@@ -186,6 +186,6 @@ export async function startServer(options: TemplateServerOptions): Promise<{
   };
 }
 
-export function stopServer(server: Server): void {
+export function stopServer(server: Server<unknown>): void {
   server.stop();
 }

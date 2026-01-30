@@ -397,7 +397,7 @@ function generateDebugPage(templates: string[]): string {
 </html>`;
 }
 
-export async function startDebugServer(port: number = 3333): Promise<Server> {
+export async function startDebugServer(port: number = 3333): Promise<Server<unknown>> {
   const templatesDir = join(import.meta.dir, "..", "templates");
   const templates = getAvailableTemplates();
 
@@ -530,6 +530,9 @@ export async function startDebugServer(port: number = 3333): Promise<Server> {
       if (pathname.startsWith("/template/")) {
         const parts = pathname.slice("/template/".length).split("/");
         const template = parts[0];
+        if (!template) {
+          return new Response("File not found", { status: 404 });
+        }
         const filePath = join(templatesDir, template, parts.slice(1).join("/") || "index.html");
         const file = Bun.file(filePath);
 

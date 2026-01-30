@@ -12,6 +12,7 @@ export interface Job {
     slug: string;
     postType: string;
     template: string;
+    update?: string;
   };
   progress?: string;
   progressPercent?: number;
