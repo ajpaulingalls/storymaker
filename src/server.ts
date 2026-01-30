@@ -16,6 +16,7 @@ export interface TemplateServerOptions {
   site: string;
   postType: string;
   postSlug: string;
+  update?: string;
 }
 
 /**
@@ -26,6 +27,9 @@ export function buildTemplateUrl(port: number, options: TemplateServerOptions): 
   url.searchParams.set("site", options.site);
   url.searchParams.set("postType", options.postType);
   url.searchParams.set("postSlug", options.postSlug);
+  if (options.update) {
+    url.searchParams.set("update", options.update);
+  }
   return url.toString();
 }
 
@@ -172,6 +176,9 @@ export async function startServer(options: TemplateServerOptions): Promise<{
   templateUrl.searchParams.set("site", options.site);
   templateUrl.searchParams.set("postType", options.postType);
   templateUrl.searchParams.set("postSlug", options.postSlug);
+  if (options.update) {
+    templateUrl.searchParams.set("update", options.update);
+  }
 
   return {
     server,

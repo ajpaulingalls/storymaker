@@ -22,6 +22,7 @@ import {
   getSlugFromLink,
   isShortUrl,
   expandShortUrl,
+  getUrlParams,
 } from "./urlUtils";
 
 const MIME_TYPES: Record<string, string> = {
@@ -285,7 +286,8 @@ function generateStoryMakerPage(templates: string[]): string {
     let currentContent = {
       site: '',
       postType: '',
-      slug: ''
+      slug: '',
+      update: ''
     };
     
     async function loadContent() {
@@ -320,7 +322,8 @@ function generateStoryMakerPage(templates: string[]): string {
         currentContent = {
           site: data.site,
           postType: data.postType,
-          slug: data.slug
+          slug: data.slug,
+          update: data.update || ''
         };
         
         // Load the preview
@@ -354,6 +357,9 @@ function generateStoryMakerPage(templates: string[]): string {
         postType: currentContent.postType,
         postSlug: currentContent.slug,
       });
+      if (currentContent.update) {
+        params.set('update', currentContent.update);
+      }
       
       return \`/preview?\${params.toString()}\`;
     }
@@ -462,7 +468,8 @@ function generateStoryMakerPage(templates: string[]): string {
             site: currentContent.site,
             slug: currentContent.slug,
             postType: currentContent.postType,
-            template: template
+            template: template,
+            update: currentContent.update || undefined
           })
         });
         
@@ -870,6 +877,7 @@ export interface CreateVideoRequest {
   slug: string;
   postType: string;
   template: string;
+  update?: string;
 }
 
 // Internal template server
@@ -921,6 +929,7 @@ async function processVideoJob(job: Job, req: Request): Promise<void> {
       site: job.request.site,
       postType: job.request.postType,
       postSlug: job.request.slug,
+      update: job.request.update,
     });
     console.log(`[Job ${job.id}] Template URL: ${templateUrl}`);
 
@@ -1077,6 +1086,7 @@ async function handleCreateVideo(req: Request): Promise<Response> {
         slug: body.slug,
         postType: body.postType,
         template: body.template,
+        update: body.update,
       },
     });
 
@@ -1243,11 +1253,14 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
           const site = getSiteFromAJLink(expandedUrl);
           const postType = getPostTypeFromLink(expandedUrl);
           const slug = getSlugFromLink(expandedUrl);
+          const updateParam = getUrlParams<{ update: string }>(expandedUrl).update;
+          const update = updateParam && /^\d+$/.test(updateParam) ? updateParam : "";
 
           return Response.json({
             site: site || "aje",
             postType: postType || "post",
             slug: slug || "",
+            update,
             expandedUrl,
           });
         } catch (error) {
@@ -1349,6 +1362,7 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
         const site = url.searchParams.get("site") || "aje";
         const postType = url.searchParams.get("postType") || "post";
         const postSlug = url.searchParams.get("postSlug") || "";
+        const update = url.searchParams.get("update") || "";
 
         const templatePath = join(templatesDir, template, "index.html");
         const file = Bun.file(templatePath);
@@ -1367,7 +1381,8 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
     window.DEBUG_URL_PARAMS = {
       site: "${site}",
       postType: "${postType}",
-      postSlug: "${postSlug}"
+      postSlug: "${postSlug}",
+      update: "${update}"
     };
   </script>
 </head>`;

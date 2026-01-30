@@ -1,7 +1,7 @@
 import type { Server } from "bun";
 import { join, extname } from "path";
 import { readdirSync } from "fs";
-import { getSiteFromAJLink, getPostTypeFromLink, getSlugFromLink, isShortUrl, expandShortUrl } from "./urlUtils";
+import { getSiteFromAJLink, getPostTypeFromLink, getSlugFromLink, isShortUrl, expandShortUrl, getUrlParams } from "./urlUtils";
 
 const MIME_TYPES: Record<string, string> = {
   ".html": "text/html",
@@ -248,7 +248,8 @@ function generateDebugPage(templates: string[]): string {
     let currentContent = {
       site: 'aje',
       postType: 'post',
-      slug: '${DEFAULT_CONTENT.slug}'
+      slug: '${DEFAULT_CONTENT.slug}',
+      update: ''
     };
     
     function setScale(scale) {
@@ -288,7 +289,8 @@ function generateDebugPage(templates: string[]): string {
         currentContent = {
           site: data.site,
           postType: data.postType,
-          slug: data.slug
+          slug: data.slug,
+          update: data.update || ''
         };
         
         // Load the preview
@@ -328,6 +330,9 @@ function generateDebugPage(templates: string[]): string {
         isLive: isLive.toString(),
         isDeveloping: isDeveloping.toString(),
       });
+      if (currentContent.update) {
+        params.set('update', currentContent.update);
+      }
       
       return \`/preview?\${params.toString()}\`;
     }
@@ -427,11 +432,14 @@ export async function startDebugServer(port: number = 3333): Promise<Server> {
           const site = getSiteFromAJLink(expandedUrl);
           const postType = getPostTypeFromLink(expandedUrl);
           const slug = getSlugFromLink(expandedUrl);
+          const updateParam = getUrlParams<{ update: string }>(expandedUrl).update;
+          const update = updateParam && /^\d+$/.test(updateParam) ? updateParam : "";
 
           return new Response(JSON.stringify({
             site: site || "aje",
             postType: postType || "post",
             slug: slug || "",
+            update,
             expandedUrl,
           }), {
             headers: { "Content-Type": "application/json" },
@@ -458,6 +466,7 @@ export async function startDebugServer(port: number = 3333): Promise<Server> {
         const site = url.searchParams.get("site") || DEFAULT_CONTENT.site;
         const postType = url.searchParams.get("postType") || DEFAULT_CONTENT.postType;
         const postSlug = url.searchParams.get("postSlug") || DEFAULT_CONTENT.slug;
+        const update = url.searchParams.get("update") || "";
         const flags = {
           isBreaking: url.searchParams.get("isBreaking") === "true",
           isLive: url.searchParams.get("isLive") === "true",
@@ -482,7 +491,8 @@ export async function startDebugServer(port: number = 3333): Promise<Server> {
     window.DEBUG_URL_PARAMS = {
       site: "${site}",
       postType: "${postType}",
-      postSlug: "${postSlug}"
+      postSlug: "${postSlug}",
+      update: "${update}"
     };
     
     // Override status flags if set

@@ -34,6 +34,7 @@ function getParams() {
       site: window.DEBUG_URL_PARAMS.site,
       postType: window.DEBUG_URL_PARAMS.postType,
       postSlug: window.DEBUG_URL_PARAMS.postSlug,
+      update: window.DEBUG_URL_PARAMS.update,
     };
   }
   
@@ -42,6 +43,7 @@ function getParams() {
     site: params.get("site"),
     postType: params.get("postType"),
     postSlug: params.get("postSlug"),
+    update: params.get("update"),
   };
 }
 
@@ -94,6 +96,57 @@ async function fetchArticleData(site, postType, postSlug) {
     // Log detailed error info since Error objects don't serialize well
     console.error("StoryMaker: Fetch error name:", fetchError.name);
     console.error("StoryMaker: Fetch error message:", fetchError.message);
+    throw fetchError;
+  }
+}
+
+// Fetch live blog update data from GraphQL endpoint
+async function fetchLiveBlogUpdate(site, postID) {
+  const config = getSiteConfig(site);
+
+  const variables = {
+    postID: postID,
+    postType: "liveblog-update",
+    preview: "",
+    isAmp: false,
+  };
+
+  const params = new URLSearchParams({
+    "wp-site": site,
+    "operationName": "LiveBlogUpdateQuery",
+    "variables": JSON.stringify(variables),
+    "extensions": "{}",
+  });
+
+  const url = `https://${config.domain}/graphql?${params.toString()}`;
+  console.log("StoryMaker: Fetching live blog update from URL:", url);
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "Wp-Site": site,
+      },
+    });
+
+    console.log("StoryMaker: Live blog update response status:", response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("StoryMaker: Live blog update error response body:", errorText);
+      throw new Error(`Failed to fetch live blog update: ${response.status} - ${errorText}`);
+    }
+
+    const json = await response.json();
+    console.log("StoryMaker: Live blog update response received");
+
+    if (!json.data || !json.data.posts) {
+      throw new Error("Invalid live blog update response structure: missing data.posts");
+    }
+
+    return json.data.posts;
+  } catch (fetchError) {
+    console.error("StoryMaker: Live blog update fetch error name:", fetchError.name);
+    console.error("StoryMaker: Live blog update fetch error message:", fetchError.message);
     throw fetchError;
   }
 }
@@ -201,9 +254,9 @@ async function initStory(options = {}) {
       }
     } else {
       // Normal mode or live debug mode - fetch from API
-      const { site, postType, postSlug } = getParams();
+      const { site, postType, postSlug, update } = getParams();
 
-      console.log("StoryMaker: Starting with params:", { site, postType, postSlug });
+      console.log("StoryMaker: Starting with params:", { site, postType, postSlug, update });
 
       if (!site || !postType || !postSlug) {
         throw new Error("Missing required URL parameters: site, postType, postSlug");
@@ -215,6 +268,17 @@ async function initStory(options = {}) {
       
       // Extract and format the data
       articleData = extractArticleData(article, site);
+
+      const updateId = update ? Number.parseInt(update, 10) : Number.NaN;
+      const isLiveBlog = String(postType).toLowerCase() === "liveblog";
+      if (isLiveBlog && Number.isInteger(updateId)) {
+        console.log("StoryMaker: Fetching live blog update data...");
+        const updateData = await fetchLiveBlogUpdate(site, updateId);
+        if (updateData?.title) {
+          articleData.title = updateData.title;
+        }
+        articleData.excerpt = "";
+      }
       
       // Apply debug flag overrides if present (from debug server live mode)
       if (window.DEBUG_FLAG_OVERRIDES) {
