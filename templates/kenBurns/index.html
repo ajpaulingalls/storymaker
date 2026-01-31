@@ -297,6 +297,15 @@
         SC.setText("title", articleData.title);
         SC.setText("excerpt", articleData.excerpt);
         SC.setImageCredit("imageCredit", articleData.imageCredit, articleData.isRTL);
+        SC.applyVisibility(articleData, {
+          logo: "#logo",
+          statusBadge: "#statusBadge",
+          location: "#location",
+          tags: "#tags",
+          title: "#title",
+          excerpt: "#excerpt",
+          imageCredit: "#imageCredit",
+        });
 
         // Set background image
         if (articleData.imageUrl) {

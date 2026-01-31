@@ -1,4 +1,5 @@
 import { TableClient, type TableEntity } from "@azure/data-tables";
+import type { ArticleData } from "./article-fetcher";
 
 // Job status types
 export type JobStatus = "pending" | "processing" | "completed" | "failed";
@@ -13,6 +14,7 @@ export interface Job {
     postType: string;
     template: string;
     update?: string;
+    articleData?: ArticleData;
   };
   progress?: string;
   progressPercent?: number;

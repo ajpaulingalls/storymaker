@@ -559,6 +559,13 @@
         
         // Set image credit
         SC.setImageCredit("imageCredit", articleData.imageCredit, articleData.isRTL);
+        SC.applyVisibility(articleData, {
+          logo: "#logoImage",
+          statusBadge: "#liveUpdatesTag",
+          location: "#location",
+          title: "#headline",
+          imageCredit: "#imageCredit",
+        });
 
         // Set background image and setup pan animation (middle 2/3rds)
         if (articleData.imageUrl) {

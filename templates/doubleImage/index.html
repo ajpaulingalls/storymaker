@@ -331,6 +331,14 @@
           locationIndicator.classList.add("has-location");
         }
         SC.setImageCredit("imageCredit", articleData.imageCredit, articleData.isRTL);
+        SC.applyVisibility(articleData, {
+          logo: "#logoImage",
+          statusBadge: "#statusBadge",
+          location: ".location-indicator",
+          title: "#title",
+          excerpt: "#excerpt",
+          imageCredit: "#imageCredit",
+        });
 
         if (articleData.imageUrl) {
           const bgImage = document.getElementById("bgImage");

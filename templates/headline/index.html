@@ -472,6 +472,15 @@
         SC.setText("source", articleData.source);
         SC.setDate("date", articleData.date, articleData.locale);
         SC.setText("shortUrl", articleData.shortUrl);
+        SC.applyVisibility(articleData, {
+          logo: "#logo",
+          statusBadge: "#statusIndicator",
+          location: "#location",
+          tags: "#tags",
+          title: "#headline",
+          excerpt: "#summary",
+          imageCredit: "#imageCredit",
+        });
 
         // Set background image
         if (articleData.imageUrl) {

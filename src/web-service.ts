@@ -24,6 +24,7 @@ import {
   expandShortUrl,
   getUrlParams,
 } from "./urlUtils";
+import { fetchArticleDataForTemplate, type ArticleData } from "./article-fetcher";
 
 const MIME_TYPES: Record<string, string> = {
   ".html": "text/html",
@@ -118,7 +119,7 @@ function generateStoryMakerPage(templates: string[]): string {
       font-size: 13px;
       color: #aaa;
     }
-    select, input, button {
+    select, input, textarea, button {
       width: 100%;
       padding: 10px;
       border: 1px solid #0f3460;
@@ -126,6 +127,10 @@ function generateStoryMakerPage(templates: string[]): string {
       background: #1a1a2e;
       color: #eee;
       font-size: 14px;
+    }
+    textarea {
+      min-height: 80px;
+      resize: vertical;
     }
     select:focus, input:focus {
       outline: none;
@@ -210,6 +215,44 @@ function generateStoryMakerPage(templates: string[]): string {
       background: #555;
       cursor: not-allowed;
     }
+    .hidden {
+      display: none;
+    }
+    .collapse-toggle {
+      background: none;
+      border: none;
+      color: #aaa;
+      cursor: pointer;
+      font-size: 18px;
+      font-weight: bold;
+      width: 30px;
+      padding: 0;
+      line-height: 1;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 4px;
+    }
+    .section-header h2 {
+      cursor: pointer;
+    }
+    .checkbox-group {
+      display: grid;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .checkbox {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #ccc;
+    }
+    .checkbox input[type="checkbox"] {
+      width: auto;
+    }
     .progress-container {
       display: none;
       margin-top: 15px;
@@ -264,6 +307,62 @@ function generateStoryMakerPage(templates: string[]): string {
     <div id="errorMessage" class="error-message"></div>
     <div id="loadingIndicator" class="loading-indicator">Loading content...</div>
     
+    <div class="section-header">
+      <h2 id="customizeHeader" onclick="toggleCustomization()">Customize</h2>
+      <button class="collapse-toggle" id="customizeToggle" onclick="toggleCustomization()" aria-label="Toggle customization">></button>
+    </div>
+    <div id="customizeSection" class="hidden">
+      <div class="control-group">
+        <label>Title</label>
+        <input type="text" id="customTitle" class="customization-input" disabled>
+      </div>
+      <div class="control-group">
+        <label>Excerpt</label>
+        <textarea id="customExcerpt" class="customization-input" disabled></textarea>
+      </div>
+      <div class="control-group">
+        <label>Image URL</label>
+        <input type="text" id="customImageUrl" class="customization-input" disabled>
+      </div>
+      <div class="control-group">
+        <label>Image Credit</label>
+        <input type="text" id="customImageCredit" class="customization-input" disabled>
+      </div>
+      <div class="control-group">
+        <label>Location</label>
+        <input type="text" id="customLocation" class="customization-input" disabled>
+      </div>
+      <div class="control-group">
+        <label>Category</label>
+        <input type="text" id="customCategory" class="customization-input" disabled>
+      </div>
+      <div class="control-group">
+        <label>Tag</label>
+        <input type="text" id="customTag" class="customization-input" disabled>
+      </div>
+      <div class="control-group">
+        <label>Visibility</label>
+        <div class="checkbox-group">
+          <label class="checkbox"><input type="checkbox" id="showTitle" class="customization-input" checked> Show title</label>
+          <label class="checkbox"><input type="checkbox" id="showExcerpt" class="customization-input" checked> Show excerpt</label>
+          <label class="checkbox"><input type="checkbox" id="showImageCredit" class="customization-input" checked> Show image credit</label>
+          <label class="checkbox"><input type="checkbox" id="showLocation" class="customization-input" checked> Show location</label>
+          <label class="checkbox"><input type="checkbox" id="showTags" class="customization-input" checked> Show tags</label>
+          <label class="checkbox"><input type="checkbox" id="showStatus" class="customization-input" checked> Show status badge</label>
+          <label class="checkbox"><input type="checkbox" id="showLogo" class="customization-input" checked> Show logo</label>
+        </div>
+      </div>
+      <div class="control-group">
+        <label>Status Flags</label>
+        <div class="checkbox-group">
+          <label class="checkbox"><input type="checkbox" id="flagBreaking" class="customization-input"> Breaking</label>
+          <label class="checkbox"><input type="checkbox" id="flagLive" class="customization-input"> Live</label>
+          <label class="checkbox"><input type="checkbox" id="flagDeveloping" class="customization-input"> Developing</label>
+        </div>
+        <p class="info-text">Status flags override article data</p>
+      </div>
+    </div>
+
     <h2>Actions</h2>
     <button onclick="updatePreview()">Refresh Preview</button>
     <button class="record" id="recordBtn" onclick="recordVideo()">Record Video</button>
@@ -289,6 +388,70 @@ function generateStoryMakerPage(templates: string[]): string {
       slug: '',
       update: ''
     };
+    let currentArticleData = null;
+    let customizationOpen = false;
+
+    function toggleCustomization() {
+      customizationOpen = !customizationOpen;
+      document.getElementById('customizeSection').classList.toggle('hidden', !customizationOpen);
+      document.getElementById('customizeToggle').textContent = customizationOpen ? 'v' : '>';
+    }
+
+    function setCustomizationEnabled(enabled) {
+      document.querySelectorAll('.customization-input').forEach((el) => {
+        el.disabled = !enabled;
+      });
+    }
+
+    function populateCustomizationForm(articleData) {
+      document.getElementById('customTitle').value = articleData.title || '';
+      document.getElementById('customExcerpt').value = articleData.excerpt || '';
+      document.getElementById('customImageUrl').value = articleData.imageUrl || '';
+      document.getElementById('customImageCredit').value = articleData.imageCredit || '';
+      document.getElementById('customLocation').value = articleData.location || '';
+      document.getElementById('customCategory').value = articleData.category || '';
+      document.getElementById('customTag').value = articleData.tag || '';
+
+      document.getElementById('showTitle').checked = !articleData.hideTitle;
+      document.getElementById('showExcerpt').checked = !articleData.hideExcerpt;
+      document.getElementById('showImageCredit').checked = !articleData.hideImageCredit;
+      document.getElementById('showLocation').checked = !articleData.hideLocation;
+      document.getElementById('showTags').checked = !articleData.hideTags;
+      document.getElementById('showStatus').checked = !articleData.hideStatusBadge;
+      document.getElementById('showLogo').checked = !articleData.hideLogo;
+
+      document.getElementById('flagBreaking').checked = !!articleData.isBreaking;
+      document.getElementById('flagLive').checked = !!articleData.isLive;
+      document.getElementById('flagDeveloping').checked = !!articleData.isDeveloping;
+    }
+
+    function buildCustomizedArticleData() {
+      if (!currentArticleData) return null;
+      const customized = { ...currentArticleData };
+
+      customized.title = document.getElementById('customTitle').value;
+      customized.excerpt = document.getElementById('customExcerpt').value;
+      const imageUrl = document.getElementById('customImageUrl').value.trim();
+      customized.imageUrl = imageUrl ? imageUrl : null;
+      customized.imageCredit = document.getElementById('customImageCredit').value;
+      customized.location = document.getElementById('customLocation').value;
+      customized.category = document.getElementById('customCategory').value;
+      customized.tag = document.getElementById('customTag').value;
+
+      customized.isBreaking = document.getElementById('flagBreaking').checked;
+      customized.isLive = document.getElementById('flagLive').checked;
+      customized.isDeveloping = document.getElementById('flagDeveloping').checked;
+
+      customized.hideTitle = !document.getElementById('showTitle').checked;
+      customized.hideExcerpt = !document.getElementById('showExcerpt').checked;
+      customized.hideImageCredit = !document.getElementById('showImageCredit').checked;
+      customized.hideLocation = !document.getElementById('showLocation').checked;
+      customized.hideTags = !document.getElementById('showTags').checked;
+      customized.hideStatusBadge = !document.getElementById('showStatus').checked;
+      customized.hideLogo = !document.getElementById('showLogo').checked;
+
+      return customized;
+    }
     
     async function loadContent() {
       const urlInput = document.getElementById('urlInput');
@@ -325,6 +488,29 @@ function generateStoryMakerPage(templates: string[]): string {
           slug: data.slug,
           update: data.update || ''
         };
+
+        const articleResponse = await fetch(\`/api/fetch-article?\${new URLSearchParams({
+          site: currentContent.site,
+          postType: currentContent.postType,
+          postSlug: currentContent.slug,
+          update: currentContent.update || ''
+        }).toString()}\`);
+        if (!articleResponse.ok) {
+          const error = await articleResponse.json().catch(() => ({}));
+          showError(error.error || 'Failed to fetch article data');
+          setLoading(false);
+          return;
+        }
+        const articleData = await articleResponse.json();
+        if (articleData.error) {
+          showError(articleData.error);
+          setLoading(false);
+          return;
+        }
+
+        currentArticleData = articleData;
+        setCustomizationEnabled(true);
+        populateCustomizationForm(articleData);
         
         // Load the preview
         updatePreview();
@@ -348,33 +534,18 @@ function generateStoryMakerPage(templates: string[]): string {
       document.getElementById('loadingIndicator').classList.toggle('active', loading);
     }
     
-    function getPreviewUrl() {
-      const template = document.getElementById('templateSelect').value;
-      
-      const params = new URLSearchParams({
-        template,
-        site: currentContent.site,
-        postType: currentContent.postType,
-        postSlug: currentContent.slug,
-      });
-      if (currentContent.update) {
-        params.set('update', currentContent.update);
-      }
-      
-      return \`/preview?\${params.toString()}\`;
-    }
-    
-    function updatePreview() {
+    async function updatePreview() {
       clearError();
       
-      if (!currentContent.slug) {
+      if (!currentContent.slug || !currentArticleData) {
         showError('Please load content from a URL first');
         return;
       }
       
       setLoading(true);
       
-      const url = getPreviewUrl();
+      const template = document.getElementById('templateSelect').value;
+      const articleData = buildCustomizedArticleData();
       const iframe = document.getElementById('previewIframe');
       
       // Explicitly set iframe dimensions
@@ -392,7 +563,21 @@ function generateStoryMakerPage(templates: string[]): string {
         showError('Failed to load preview');
       };
       
-      iframe.src = url;
+      try {
+        const response = await fetch('/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ template, articleData })
+        });
+        if (!response.ok) {
+          throw new Error('Failed to load preview');
+        }
+        const html = await response.text();
+        iframe.srcdoc = html;
+      } catch (error) {
+        setLoading(false);
+        showError('Failed to load preview');
+      }
     }
     
     document.getElementById('templateSelect').addEventListener('change', () => {
@@ -405,42 +590,31 @@ function generateStoryMakerPage(templates: string[]): string {
     document.getElementById('urlInput').addEventListener('keypress', function(e) {
       if (e.key === 'Enter') loadContent();
     });
-    
-    // Site configuration for GraphQL
-    const SITE_CONFIG = {
-      aje: { domain: 'www.aljazeera.com' },
-      aja: { domain: 'www.aljazeera.net' }
-    };
-    
-    // Fetch article data from GraphQL
-    async function fetchArticleData(site, postType, postSlug) {
-      const config = SITE_CONFIG[site] || SITE_CONFIG.aje;
-      const variables = { name: postSlug, postType: postType, preview: '' };
-      const params = new URLSearchParams({
-        'wp-site': site,
-        'operationName': 'ArchipelagoSingleArticleQuery',
-        'variables': JSON.stringify(variables),
-        'extensions': '{}'
-      });
-      
-      const url = \`https://\${config.domain}/graphql?\${params.toString()}\`;
-      const response = await fetch(url, { headers: { 'Wp-Site': site } });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch article data');
+
+    setCustomizationEnabled(false);
+
+    // Auto-refresh preview when customization fields change
+    document.querySelectorAll('.customization-input').forEach((el) => {
+      if (el.type === 'checkbox') {
+        el.addEventListener('change', () => {
+          if (currentArticleData) updatePreview();
+        });
+      } else {
+        el.addEventListener('blur', () => {
+          if (currentArticleData) updatePreview();
+        });
+        el.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter' && currentArticleData) {
+            e.preventDefault();
+            updatePreview();
+          }
+        });
       }
-      
-      const json = await response.json();
-      if (!json.data || !json.data.article) {
-        throw new Error('Invalid article response');
-      }
-      
-      return json.data.article;
-    }
+    });
     
     // Record video function
     async function recordVideo() {
-      if (!currentContent.slug) {
+      if (!currentContent.slug || !currentArticleData) {
         showError('Please load content from a URL first');
         return;
       }
@@ -459,6 +633,7 @@ function generateStoryMakerPage(templates: string[]): string {
       
       try {
         const template = document.getElementById('templateSelect').value;
+        const articleData = buildCustomizedArticleData();
         
         // Start video creation job
         const createResponse = await fetch('/api/create-video', {
@@ -469,7 +644,8 @@ function generateStoryMakerPage(templates: string[]): string {
             slug: currentContent.slug,
             postType: currentContent.postType,
             template: template,
-            update: currentContent.update || undefined
+            update: currentContent.update || undefined,
+            articleData: articleData
           })
         });
         
@@ -498,7 +674,7 @@ function generateStoryMakerPage(templates: string[]): string {
             videoUrl = status.url;
             thumbnailUrl = status.thumbnailUrl || '';
             progressBarFill.style.width = '80%';
-            progressText.textContent = 'Video created! Fetching article data...';
+            progressText.textContent = 'Video created! Preparing review...';
           } else if (status.status === 'failed') {
             throw new Error(status.error || 'Video creation failed');
           } else {
@@ -509,18 +685,13 @@ function generateStoryMakerPage(templates: string[]): string {
           }
         }
         
-        // Fetch article data for publish metadata
-        const article = await fetchArticleData(
-          currentContent.site,
-          currentContent.postType,
-          currentContent.slug
-        );
+        const article = articleData || currentArticleData;
         
         progressBarFill.style.width = '90%';
         progressText.textContent = 'Preparing review page...';
         
         // Determine posting category
-        let postingCategory = article.primaryCategoryTerm || 'news';
+        let postingCategory = 'news';
         if (article.isBreaking) postingCategory = 'breaking';
         else if (article.isLive) postingCategory = 'live';
         else if (article.isDeveloping) postingCategory = 'developing';
@@ -532,9 +703,9 @@ function generateStoryMakerPage(templates: string[]): string {
           thumbnailUrl: thumbnailUrl,
           articleUrl: articleUrl,
           title: article.title || '',
-          summary: article.excerpt || article.socialMediaSummary || '',
-          category: article.primaryCategoryTermName || '',
-          keywords: article.primaryTagsTermName || '',
+          summary: article.excerpt || '',
+          category: article.category || '',
+          keywords: article.tag || '',
           postingCategory: postingCategory,
           publishedDate: article.date || new Date().toISOString(),
           slug: currentContent.slug
@@ -549,10 +720,25 @@ function generateStoryMakerPage(templates: string[]): string {
         
       } catch (error) {
         showError('Recording failed: ' + error.message);
-        recordBtn.disabled = false;
-        progressContainer.classList.remove('active');
+        resetRecordingUI();
       }
     }
+
+    function resetRecordingUI() {
+      const recordBtn = document.getElementById('recordBtn');
+      const progressContainer = document.getElementById('progressContainer');
+      const progressBarFill = document.getElementById('progressBarFill');
+      recordBtn.disabled = false;
+      progressContainer.classList.remove('active');
+      progressBarFill.style.width = '0%';
+    }
+
+    // Reset UI when returning via browser back button
+    window.addEventListener('pageshow', function(event) {
+      if (event.persisted) {
+        resetRecordingUI();
+      }
+    });
   </script>
 </body>
 </html>`;
@@ -878,6 +1064,7 @@ export interface CreateVideoRequest {
   postType: string;
   template: string;
   update?: string;
+  articleData?: ArticleData;
 }
 
 // Internal template server
@@ -919,18 +1106,29 @@ async function processVideoJob(job: Job, req: Request): Promise<void> {
     // Ensure videos directory exists
     await Bun.$`mkdir -p ${videosDir}`.quiet();
 
-    // Build template URL using the shared function
-    const port = templateServer.port;
-    if (!port) {
-      throw new Error("Template server port is not available");
+    // Build template URL (use preview when customized data is provided)
+    let templateUrl: string;
+    if (job.request.articleData) {
+      const host = req.headers.get("host") || "localhost:8080";
+      const protocol = req.headers.get("x-forwarded-proto") || "http";
+      const params = new URLSearchParams({
+        template: job.request.template,
+        jobId: job.id,
+      });
+      templateUrl = `${protocol}://${host}/preview?${params.toString()}`;
+    } else {
+      const port = templateServer.port;
+      if (!port) {
+        throw new Error("Template server port is not available");
+      }
+      templateUrl = buildTemplateUrl(port, {
+        template: job.request.template,
+        site: job.request.site,
+        postType: job.request.postType,
+        postSlug: job.request.slug,
+        update: job.request.update,
+      });
     }
-    const templateUrl = buildTemplateUrl(port, {
-      template: job.request.template,
-      site: job.request.site,
-      postType: job.request.postType,
-      postSlug: job.request.slug,
-      update: job.request.update,
-    });
     console.log(`[Job ${job.id}] Template URL: ${templateUrl}`);
 
     // Update progress
@@ -1087,6 +1285,7 @@ async function handleCreateVideo(req: Request): Promise<Response> {
         postType: body.postType,
         template: body.template,
         update: body.update,
+        articleData: body.articleData,
       },
     });
 
@@ -1269,6 +1468,28 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
         }
       }
 
+      // API endpoint: fetch article data (server-side)
+      if (pathname === "/api/fetch-article" && method === "GET") {
+        const site = url.searchParams.get("site") || "";
+        const postType = url.searchParams.get("postType") || "";
+        const postSlug = url.searchParams.get("postSlug") || "";
+        const update = url.searchParams.get("update") || undefined;
+
+        try {
+          const articleData = await fetchArticleDataForTemplate({
+            site,
+            postType,
+            postSlug,
+            update,
+          });
+          return Response.json(articleData);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Failed to fetch article data";
+          console.error("[Web Service] Error fetching article data:", message);
+          return Response.json({ error: message }, { status: 500 });
+        }
+      }
+
       // API endpoint: publish to Social Pulse
       if (pathname === "/api/publish" && method === "POST") {
         // Check if Social Pulse is configured
@@ -1357,12 +1578,36 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
       }
 
       // Preview endpoint: serve template with debug script injection
-      if (pathname === "/preview" && method === "GET") {
-        const template = url.searchParams.get("template") || "default";
-        const site = url.searchParams.get("site") || "aje";
-        const postType = url.searchParams.get("postType") || "post";
-        const postSlug = url.searchParams.get("postSlug") || "";
-        const update = url.searchParams.get("update") || "";
+      if (pathname === "/preview" && (method === "GET" || method === "POST")) {
+        let template = url.searchParams.get("template") || "default";
+        let site = url.searchParams.get("site") || "aje";
+        let postType = url.searchParams.get("postType") || "post";
+        let postSlug = url.searchParams.get("postSlug") || "";
+        let update = url.searchParams.get("update") || "";
+        let articleData: ArticleData | null = null;
+
+        // Track if this is a recording request (jobId present) - don't mock storyReady/storyDone
+        let isRecordingMode = false;
+
+        if (method === "POST") {
+          try {
+            const body = await req.json() as { template?: string; articleData?: ArticleData };
+            template = body.template || template;
+            articleData = body.articleData || null;
+          } catch (error) {
+            return new Response("Invalid preview payload", { status: 400 });
+          }
+        } else {
+          const jobId = url.searchParams.get("jobId");
+          if (jobId) {
+            isRecordingMode = true;
+            const job = await jobStore.get(jobId);
+            if (job?.request?.articleData) {
+              articleData = job.request.articleData;
+              template = job.request.template || template;
+            }
+          }
+        }
 
         const templatePath = join(templatesDir, template, "index.html");
         const file = Bun.file(templatePath);
@@ -1370,8 +1615,32 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
         if (await file.exists()) {
           let html = await file.text();
 
-          // Inject debug script - mock recording functions and pass content params
-          const debugScript = `
+          let debugScript: string;
+          if (articleData) {
+            const serialized = JSON.stringify(articleData).replace(/</g, "\\u003c");
+            if (isRecordingMode) {
+              // Recording mode - only inject data, let recorder handle storyReady/storyDone
+              debugScript = `
+  <script>
+    // Recording mode - inject customized article data (recorder provides storyReady/storyDone)
+    window.DEBUG_ARTICLE_DATA = ${serialized};
+  </script>
+</head>`;
+            } else {
+              // Preview mode - mock recording functions
+              debugScript = `
+  <script>
+    // Preview mode - mock recording functions
+    window.storyReady = () => Promise.resolve();
+    window.storyDone = () => Promise.resolve();
+    
+    // Preview mode - inject customized article data
+    window.DEBUG_ARTICLE_DATA = ${serialized};
+  </script>
+</head>`;
+            }
+          } else {
+            debugScript = `
   <script>
     // Preview mode - mock recording functions
     window.storyReady = () => Promise.resolve();
@@ -1386,8 +1655,9 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
     };
   </script>
 </head>`;
+          }
 
-          html = html.replace('</head>', debugScript);
+          html = html.replace("</head>", debugScript);
 
           return new Response(html, {
             headers: { "Content-Type": "text/html" },
@@ -1465,6 +1735,7 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
                 slug: "string (required) - Article slug",
                 postType: "string (required) - Post type (e.g., 'post')",
                 template: "string (required) - Template name (e.g., 'default', 'breaking')",
+                articleData: "object (optional) - Customized article data payload",
               },
               response: {
                 jobId: "string - Job ID to poll for status",
@@ -1490,6 +1761,17 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
                 postType: "string - Post type",
                 slug: "string - Article slug",
                 expandedUrl: "string - Expanded URL (if short URL was provided)",
+              },
+            },
+            "GET /api/fetch-article?site=&postType=&postSlug=": {
+              description: "Fetch article data server-side for customization",
+              response: {
+                title: "string",
+                excerpt: "string",
+                imageUrl: "string | null",
+                category: "string",
+                tag: "string",
+                date: "string | null (ISO)",
               },
             },
             "GET /videos/{filename}": "Serve generated videos (fallback when blob storage unavailable)",

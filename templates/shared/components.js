@@ -15,6 +15,52 @@ window.StoryComponents = {
   },
 
   /**
+   * Toggle hidden class on elements.
+   * @param {string|Element} target - CSS selector or element
+   * @param {boolean} hidden - Whether to hide the element
+   */
+  toggleHidden(target, hidden) {
+    const applyHidden = (el) => {
+      if (!el) return;
+      el.classList.toggle("hidden", hidden);
+    };
+
+    if (typeof target === "string") {
+      document.querySelectorAll(target).forEach(applyHidden);
+      return;
+    }
+
+    applyHidden(target);
+  },
+
+  /**
+   * Apply visibility flags from article data to template elements.
+   * @param {object} articleData - Article data with hide* flags
+   * @param {object} mapping - Map of field names to selectors
+   */
+  applyVisibility(articleData, mapping = {}) {
+    if (!articleData) return;
+
+    const visibilityMap = {
+      title: articleData.hideTitle,
+      excerpt: articleData.hideExcerpt,
+      imageCredit: articleData.hideImageCredit,
+      location: articleData.hideLocation,
+      tags: articleData.hideTags,
+      statusBadge: articleData.hideStatusBadge,
+      logo: articleData.hideLogo,
+    };
+
+    Object.entries(visibilityMap).forEach(([field, hidden]) => {
+      if (hidden === undefined || hidden === null) return;
+      const selectors = mapping[field];
+      if (!selectors) return;
+      const selectorList = Array.isArray(selectors) ? selectors : [selectors];
+      selectorList.forEach((selector) => this.toggleHidden(selector, hidden));
+    });
+  },
+
+  /**
    * Set a status badge (Breaking/Live/Developing)
    * @param {string} elementId - The ID of the badge element
    * @param {object} articleData - Article data with isBreaking, isLive, isDeveloping flags

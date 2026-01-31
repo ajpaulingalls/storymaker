@@ -293,6 +293,13 @@
         SC.setText("source", articleData.source);
         SC.setDate("date", articleData.date, articleData.locale);
         SC.setImageCredit("imageCredit", articleData.imageCredit, articleData.isRTL);
+        SC.applyVisibility(articleData, {
+          logo: "#logo",
+          statusBadge: "#statusBadge",
+          title: "#title",
+          excerpt: "#excerpt",
+          imageCredit: "#imageCredit",
+        });
 
         if (articleData.imageUrl) {
           const bgImage = document.getElementById("bgImage");

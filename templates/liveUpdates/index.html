@@ -550,6 +550,13 @@
         
         // Set image credit
         SC.setImageCredit("imageCredit", articleData.imageCredit, articleData.isRTL);
+        SC.applyVisibility(articleData, {
+          logo: "#logoImage",
+          statusBadge: "#liveUpdatesTag",
+          location: "#location",
+          title: "#headline",
+          imageCredit: "#imageCredit",
+        });
 
         // Set background image with Ken Burns effect
         if (articleData.imageUrl) {

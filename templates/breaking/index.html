@@ -395,6 +395,14 @@
         SC.setText("excerpt", articleData.excerpt);
         SC.setText("source", articleData.source);
         SC.setImageCredit("imageCredit", articleData.imageCredit, articleData.isRTL);
+        SC.applyVisibility(articleData, {
+          logo: "#logo",
+          statusBadge: "#breakingLabel",
+          location: "#location",
+          title: "#title",
+          excerpt: "#excerpt",
+          imageCredit: "#imageCredit",
+        });
 
         // Set breaking label based on status
         const label = document.getElementById("breakingLabel");
