@@ -173,6 +173,10 @@ const VIRTUAL_CLOCK_SCRIPT = `
         a.currentTime = virtualTime - startVirtualTime;
       } catch (e) {}
     });
+    
+    // Force style recalculation to flush any pending DOM changes
+    // This ensures layout is up-to-date before the next render
+    void document.body.offsetHeight;
   };
   
   // Get current virtual time
@@ -183,6 +187,22 @@ const VIRTUAL_CLOCK_SCRIPT = `
   
   // Check current mode
   window.__isVirtualMode = () => mode === 'virtual';
+  
+  // Wait for actual browser render using original RAF
+  // This ensures the browser has completed style/layout/paint before screenshot
+  window.__waitForRender = () => {
+    return new Promise(resolve => {
+      // Use original RAF to wait for browser's actual animation frame
+      originalRAF(() => {
+        // Double RAF ensures paint has completed
+        // First RAF: browser schedules work
+        // Second RAF: previous frame's work is done
+        originalRAF(() => {
+          resolve();
+        });
+      });
+    });
+  };
 })()
 `;
 
@@ -349,8 +369,9 @@ export async function recordStory(
         (window as any).__advanceTime(delta);
       }, frameInterval);
 
-      // Small delay to let browser render
-      await new Promise(resolve => setTimeout(resolve, 5));
+      // Wait for browser to complete rendering (style, layout, paint)
+      // Uses double requestAnimationFrame to ensure paint is complete
+      await page.evaluate(() => (window as any).__waitForRender());
 
       // Take screenshot
       const framePath = join(tempDir, `frame_${String(frame).padStart(5, "0")}.png`);
