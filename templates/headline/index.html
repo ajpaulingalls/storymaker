@@ -427,6 +427,17 @@
     <script>
       const SC = window.StoryComponents;
 
+      // Headline template duration: 12 seconds (matches zoomIn animation)
+      const STORY_DURATION = 12000;
+
+      /**
+       * Returns the total duration of the story in milliseconds.
+       * Called by the recorder to determine total frames.
+       */
+      window.getStoryDuration = function() {
+        return STORY_DURATION;
+      };
+
       // Animate headline word by word
       function animateHeadline(text, container) {
         const words = text.split(" ");

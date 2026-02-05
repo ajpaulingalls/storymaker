@@ -317,11 +317,24 @@
       const SUMMARY_DURATION = 7000;    // 7 seconds per summary point
       const TRANSITION_BUFFER = 800;    // Match CSS transition duration
       const MIN_DURATION = 12000;       // Minimum 12 seconds total
+      const FINAL_HOLD = 1000;          // Hold final state duration
 
       let allImages = [];
       let currentImageIndex = 0;
       let summaryPoints = [];
       let articleDataRef = null;
+
+      /**
+       * Returns the total duration of the story in milliseconds.
+       * Called by the recorder to determine total frames.
+       */
+      window.getStoryDuration = function() {
+        const numPoints = summaryPoints.length;
+        if (numPoints === 0) {
+          return MIN_DURATION;
+        }
+        return INITIAL_DELAY + (numPoints * SUMMARY_DURATION) + FINAL_HOLD;
+      };
 
       async function preloadImages(urls) {
         const promises = urls.map(url => SC.loadImage(url));
@@ -519,7 +532,7 @@
         }
 
         // Hold final state briefly
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, FINAL_HOLD));
       }
 
       document.addEventListener("DOMContentLoaded", () => {

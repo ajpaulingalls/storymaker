@@ -16,7 +16,7 @@ export interface RecorderOptions {
   width?: number;
   height?: number;
   frameRate?: number;
-  duration?: number;
+  defaultDuration?: number; // Fallback duration if template doesn't provide one
   onProgress?: (progress: RecorderProgress) => void;
 }
 
@@ -28,42 +28,161 @@ export interface RecorderResult {
 }
 
 /**
- * Animation control script injected into the page.
- * Captures all CSS animations and provides pause/seek functionality.
+ * Virtual clock script injected into the page.
+ * Starts in passthrough mode (using real timers) during initialization.
+ * Call __startVirtualClock() to switch to virtual time control for frame capture.
  */
-const ANIMATION_CONTROL_SCRIPT = `
+const VIRTUAL_CLOCK_SCRIPT = `
 (() => {
-  // Get all animations on the page
-  window.__animations = document.getAnimations();
+  // Store original functions
+  const originalSetTimeout = window.setTimeout.bind(window);
+  const originalSetInterval = window.setInterval.bind(window);
+  const originalClearTimeout = window.clearTimeout.bind(window);
+  const originalClearInterval = window.clearInterval.bind(window);
+  const originalDateNow = Date.now;
+  const originalRAF = window.requestAnimationFrame.bind(window);
+  const originalCAF = window.cancelAnimationFrame.bind(window);
+  const originalPerformanceNow = performance.now.bind(performance);
   
-  // Pause all animations
-  window.__animations.forEach(a => a.pause());
+  // Mode: 'passthrough' uses real timers, 'virtual' uses controlled time
+  let mode = 'passthrough';
   
-  // Seek all animations to a specific time
-  window.__seekTo = (timeMs) => {
-    window.__animations.forEach(a => {
+  // Virtual clock state (initialized when switching to virtual mode)
+  let virtualTime = 0;
+  let startVirtualTime = 0;
+  let timerId = 1;
+  const timers = new Map(); // id -> { callback, triggerTime, interval, type }
+  const rafCallbacks = new Map(); // id -> callback
+  let rafId = 1;
+  
+  // Override setTimeout
+  window.setTimeout = (callback, delay = 0, ...args) => {
+    if (mode === 'passthrough') {
+      return originalSetTimeout(callback, delay, ...args);
+    }
+    const id = timerId++;
+    timers.set(id, {
+      callback: () => callback(...args),
+      triggerTime: virtualTime + delay,
+      type: 'timeout'
+    });
+    return id;
+  };
+  
+  // Override setInterval
+  window.setInterval = (callback, delay = 0, ...args) => {
+    if (mode === 'passthrough') {
+      return originalSetInterval(callback, delay, ...args);
+    }
+    const id = timerId++;
+    timers.set(id, {
+      callback: () => callback(...args),
+      triggerTime: virtualTime + delay,
+      interval: delay,
+      type: 'interval'
+    });
+    return id;
+  };
+  
+  // Override clearTimeout/clearInterval
+  window.clearTimeout = (id) => {
+    if (mode === 'passthrough') {
+      return originalClearTimeout(id);
+    }
+    timers.delete(id);
+  };
+  window.clearInterval = (id) => {
+    if (mode === 'passthrough') {
+      return originalClearInterval(id);
+    }
+    timers.delete(id);
+  };
+  
+  // Override requestAnimationFrame
+  window.requestAnimationFrame = (callback) => {
+    if (mode === 'passthrough') {
+      return originalRAF(callback);
+    }
+    const id = rafId++;
+    rafCallbacks.set(id, callback);
+    return id;
+  };
+  
+  // Override cancelAnimationFrame
+  window.cancelAnimationFrame = (id) => {
+    if (mode === 'passthrough') {
+      return originalCAF(id);
+    }
+    rafCallbacks.delete(id);
+  };
+  
+  // Start virtual clock mode - called after page signals ready
+  window.__startVirtualClock = () => {
+    if (mode === 'virtual') return;
+    mode = 'virtual';
+    virtualTime = originalDateNow();
+    startVirtualTime = virtualTime;
+    console.log('[Virtual Clock] Started at', virtualTime);
+    
+    // Override Date.now and performance.now only when in virtual mode
+    Date.now = () => virtualTime;
+    performance.now = () => virtualTime - startVirtualTime;
+  };
+  
+  // Advance virtual time and process timers
+  window.__advanceTime = (deltaMs) => {
+    if (mode !== 'virtual') {
+      console.warn('[Virtual Clock] __advanceTime called but not in virtual mode');
+      return;
+    }
+    
+    virtualTime += deltaMs;
+    
+    // Process RAF callbacks
+    const rafs = Array.from(rafCallbacks.entries());
+    rafCallbacks.clear();
+    for (const [id, callback] of rafs) {
       try {
-        const timing = a.effect?.getTiming();
-        if (timing) {
-          // For infinite animations, cap at one iteration
-          const iterationDuration = timing.duration || 0;
-          const maxTime = timing.iterations === Infinity 
-            ? iterationDuration 
-            : (iterationDuration * (timing.iterations || 1)) + (timing.delay || 0);
-          
-          // Set currentTime, accounting for delay
-          a.currentTime = Math.min(timeMs, maxTime);
-        } else {
-          a.currentTime = timeMs;
-        }
+        callback(virtualTime - startVirtualTime);
       } catch (e) {
-        // Some animations may not support seeking
+        console.error('RAF callback error:', e);
       }
+    }
+    
+    // Process timers that should fire
+    for (const [id, timer] of timers.entries()) {
+      if (timer.triggerTime <= virtualTime) {
+        try {
+          timer.callback();
+        } catch (e) {
+          console.error('Timer callback error:', e);
+        }
+        
+        if (timer.type === 'interval') {
+          timer.triggerTime = virtualTime + timer.interval;
+        } else {
+          timers.delete(id);
+        }
+      }
+    }
+    
+    // Also advance CSS animations
+    const animations = document.getAnimations();
+    animations.forEach(a => {
+      try {
+        a.currentTime = virtualTime - startVirtualTime;
+      } catch (e) {}
     });
   };
   
-  // Return animation count for logging
-  return window.__animations.length;
+  // Get current virtual time
+  window.__getVirtualTime = () => virtualTime;
+  
+  // Check if there are pending timers
+  window.__hasPendingTimers = () => timers.size > 0 || rafCallbacks.size > 0;
+  
+  // Check current mode
+  window.__isVirtualMode = () => mode === 'virtual';
 })()
 `;
 
@@ -76,7 +195,7 @@ export async function recordStory(
     width = 1080, 
     height = 1920,
     frameRate = 25,
-    duration = 10000, // 10 seconds default
+    defaultDuration = 10000, // 10 seconds fallback
     onProgress,
   } = options;
 
@@ -119,7 +238,7 @@ export async function recordStory(
     page = await browser.newPage();
 
     // Set longer timeouts for frame capture
-    page.setDefaultTimeout(120000); // 2 minutes
+    page.setDefaultTimeout(300000); // 5 minutes for long recordings
     page.setDefaultNavigationTimeout(60000); // 1 minute for navigation
 
     // Forward console messages from the page
@@ -159,15 +278,18 @@ export async function recordStory(
       deviceScaleFactor: 1,
     });
 
+    // Inject virtual clock BEFORE any page scripts run
+    await page.evaluateOnNewDocument(VIRTUAL_CLOCK_SCRIPT);
+
     // Expose ready signal function
     await page.exposeFunction("storyReady", () => {
       console.log("Page signaled ready");
       resolveReady();
     });
 
-    // Expose done signal function (not used in frame-by-frame mode, but templates call it)
+    // Expose done signal function (no-op - we control timing via virtual clock)
     await page.exposeFunction("storyDone", () => {
-      // No-op in frame-by-frame mode
+      console.log("Page signaled done (ignored - using virtual clock)");
     });
 
     // Navigate to page
@@ -187,20 +309,32 @@ export async function recordStory(
     await page.evaluate("document.fonts.ready");
     console.log("Fonts loaded");
 
-    // Small delay to ensure all animations are initialized
+    // Small delay to ensure rendering is complete
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    // Inject animation control script
-    const animationCount = await page.evaluate(ANIMATION_CONTROL_SCRIPT);
-    console.log(`Animation control initialized: ${animationCount} animations found`);
+    // Get story duration from template (or use default) - do this BEFORE starting virtual clock
+    const storyDuration = await page.evaluate((fallback) => {
+      if (typeof (window as any).getStoryDuration === "function") {
+        return (window as any).getStoryDuration();
+      }
+      return fallback;
+    }, defaultDuration);
+    
+    console.log(`Story duration: ${storyDuration}ms (${(storyDuration / 1000).toFixed(1)}s)`);
+
+    // Switch to virtual clock mode for frame-by-frame capture
+    await page.evaluate(() => {
+      (window as any).__startVirtualClock();
+    });
+    console.log("Virtual clock started");
 
     // Create temp directory for frames
     tempDir = await mkdtemp(join(tmpdir(), "storymaker-frames-"));
     console.log(`Temp directory created: ${tempDir}`);
 
     // Calculate frame parameters
-    const totalFrames = Math.ceil((duration / 1000) * frameRate);
     const frameInterval = 1000 / frameRate; // ms per frame
+    const totalFrames = Math.ceil((storyDuration / 1000) * frameRate);
     
     console.log(`Starting frame capture: ${totalFrames} frames at ${frameRate}fps`);
     const captureStartTime = Date.now();
@@ -208,17 +342,18 @@ export async function recordStory(
     // Report starting capture
     reportProgress({ phase: "capturing", currentFrame: 0, totalFrames, percent: 10 });
 
-    // Capture frames
+    // Capture frames by advancing virtual time
     for (let frame = 0; frame < totalFrames; frame++) {
-      const timeMs = frame * frameInterval;
-      
-      // Seek animations to current time
-      await page.evaluate((t) => {
-        (window as any).__seekTo(t);
-      }, timeMs);
+      // Advance virtual time to this frame's timestamp
+      await page.evaluate((delta) => {
+        (window as any).__advanceTime(delta);
+      }, frameInterval);
+
+      // Small delay to let browser render
+      await new Promise(resolve => setTimeout(resolve, 5));
 
       // Take screenshot
-      const framePath = join(tempDir, `frame_${String(frame).padStart(4, "0")}.png`);
+      const framePath = join(tempDir, `frame_${String(frame).padStart(5, "0")}.png`);
       await page.screenshot({
         path: framePath,
         type: "png",
@@ -236,22 +371,22 @@ export async function recordStory(
         });
       }
       
-      // Console logging every 30 frames (1 second)
-      if (frame % 30 === 0) {
+      // Console logging every 25 frames (1 second of video)
+      if (frame % frameRate === 0) {
         const progress = ((frame / totalFrames) * 100).toFixed(0);
         console.log(`Frame capture: ${progress}% (${frame}/${totalFrames})`);
       }
     }
 
     const captureDuration = ((Date.now() - captureStartTime) / 1000).toFixed(1);
-    console.log(`Frame capture completed in ${captureDuration}s`);
+    console.log(`Frame capture completed: ${totalFrames} frames in ${captureDuration}s`);
 
     // Stitch frames into video with FFmpeg
-    console.log(`Stitching frames into video: ${outputPath}`);
+    console.log(`Stitching ${totalFrames} frames into video: ${outputPath}`);
     reportProgress({ phase: "stitching", percent: 75 });
     const stitchStartTime = Date.now();
     
-    const framePattern = join(tempDir, "frame_%04d.png");
+    const framePattern = join(tempDir, "frame_%05d.png");
     const ffmpegResult = await Bun.$`ffmpeg -y -framerate ${frameRate} -i ${framePattern} -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p ${outputPath}`;
 
     const stitchDuration = ((Date.now() - stitchStartTime) / 1000).toFixed(1);
@@ -268,7 +403,7 @@ export async function recordStory(
     console.log(`FFmpeg stitching completed in ${stitchDuration}s`);
 
     // Generate thumbnail from the last frame
-    const lastFramePath = join(tempDir, `frame_${String(totalFrames - 1).padStart(4, "0")}.png`);
+    const lastFramePath = join(tempDir, `frame_${String(totalFrames - 1).padStart(5, "0")}.png`);
     const thumbnailPath = outputPath.replace(/\.mp4$/, ".jpg");
     
     console.log(`Generating thumbnail from last frame...`);

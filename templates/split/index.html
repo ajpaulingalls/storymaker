@@ -290,6 +290,17 @@
     <script>
       const SC = window.StoryComponents;
 
+      // Split template duration: 10 seconds
+      const STORY_DURATION = 10000;
+
+      /**
+       * Returns the total duration of the story in milliseconds.
+       * Called by the recorder to determine total frames.
+       */
+      window.getStoryDuration = function() {
+        return STORY_DURATION;
+      };
+
       async function renderContent(articleData) {
         SC.hideLoading();
         SC.applyAccentColors(articleData);
