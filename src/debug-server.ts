@@ -189,6 +189,69 @@ function generateDebugPage(templates: string[]): string {
     .hidden {
       display: none;
     }
+    .list-container {
+      background: #1a1a2e;
+      border: 1px solid #0f3460;
+      border-radius: 6px;
+      padding: 10px;
+      margin-top: 5px;
+    }
+    .list-item {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #0f3460;
+    }
+    .list-item:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+    .list-item-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .list-item input, .list-item textarea {
+      padding: 6px 8px;
+      font-size: 12px;
+    }
+    .list-item textarea {
+      min-height: 60px;
+    }
+    .list-item .remove-btn {
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      margin: 0;
+      background: #4a1a1a;
+      color: #ff6b6b;
+      font-size: 16px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .list-item .remove-btn:hover {
+      background: #6a2a2a;
+    }
+    .add-btn {
+      width: 100%;
+      margin-top: 8px;
+      padding: 8px;
+      font-size: 12px;
+      background: #0f3460;
+    }
+    .add-btn:hover {
+      background: #1a4a7a;
+    }
+    .empty-list {
+      color: #666;
+      font-size: 12px;
+      text-align: center;
+      padding: 10px;
+    }
     .collapse-toggle {
       background: none;
       border: none;
@@ -308,6 +371,29 @@ function generateDebugPage(templates: string[]): string {
       </div>
     </div>
     
+    <div class="section-header">
+      <h2 id="summaryHeader" onclick="toggleSummary()">Summary</h2>
+      <button class="collapse-toggle" id="summaryToggle" onclick="toggleSummary()" aria-label="Toggle summary">></button>
+    </div>
+    <div id="summarySection" class="hidden">
+      <div class="control-group">
+        <label>Additional Images</label>
+        <div class="list-container" id="additionalImagesList">
+          <div class="empty-list">No additional images</div>
+        </div>
+        <button class="add-btn" onclick="addAdditionalImage()">+ Add Image</button>
+        <p class="info-text">Extra images for narrative template</p>
+      </div>
+      <div class="control-group">
+        <label>Summary Points</label>
+        <div class="list-container" id="summaryPointsList">
+          <div class="empty-list">No summary points</div>
+        </div>
+        <button class="add-btn" onclick="addSummaryPoint()">+ Add Summary Point</button>
+        <p class="info-text">Statements shown one at a time</p>
+      </div>
+    </div>
+    
     <h2>Preview Scale</h2>
     <div class="control-group scale-controls">
       <button onclick="setScale(0.3)">30%</button>
@@ -344,6 +430,7 @@ function generateDebugPage(templates: string[]): string {
     };
     let currentArticleData = null;
     let customizationOpen = false;
+    let summaryOpen = false;
 
     function toggleCustomization() {
       customizationOpen = !customizationOpen;
@@ -351,10 +438,99 @@ function generateDebugPage(templates: string[]): string {
       document.getElementById('customizeToggle').textContent = customizationOpen ? 'v' : '>';
     }
 
+    function toggleSummary() {
+      summaryOpen = !summaryOpen;
+      document.getElementById('summarySection').classList.toggle('hidden', !summaryOpen);
+      document.getElementById('summaryToggle').textContent = summaryOpen ? 'v' : '>';
+    }
+
     function setCustomizationEnabled(enabled) {
       document.querySelectorAll('.customization-input').forEach((el) => {
         el.disabled = !enabled;
       });
+    }
+
+    function renderAdditionalImagesList() {
+      const container = document.getElementById('additionalImagesList');
+      const images = currentArticleData?.additionalImages || [];
+      
+      if (images.length === 0) {
+        container.innerHTML = '<div class="empty-list">No additional images</div>';
+        return;
+      }
+      
+      container.innerHTML = images.map((img, index) => \`
+        <div class="list-item" data-index="\${index}">
+          <div class="list-item-content">
+            <input type="text" placeholder="Image URL" value="\${img.src || ''}" onchange="updateAdditionalImage(\${index}, 'src', this.value)">
+            <input type="text" placeholder="Credit" value="\${img.credit || ''}" onchange="updateAdditionalImage(\${index}, 'credit', this.value)">
+          </div>
+          <button class="remove-btn" onclick="removeAdditionalImage(\${index})">×</button>
+        </div>
+      \`).join('');
+    }
+
+    function addAdditionalImage() {
+      if (!currentArticleData) return;
+      if (!currentArticleData.additionalImages) {
+        currentArticleData.additionalImages = [];
+      }
+      currentArticleData.additionalImages.push({ src: '', alt: '', caption: '', credit: '' });
+      renderAdditionalImagesList();
+    }
+
+    function removeAdditionalImage(index) {
+      if (!currentArticleData?.additionalImages) return;
+      currentArticleData.additionalImages.splice(index, 1);
+      renderAdditionalImagesList();
+      updatePreview();
+    }
+
+    function updateAdditionalImage(index, field, value) {
+      if (!currentArticleData?.additionalImages?.[index]) return;
+      currentArticleData.additionalImages[index][field] = value;
+      updatePreview();
+    }
+
+    function renderSummaryPointsList() {
+      const container = document.getElementById('summaryPointsList');
+      const points = currentArticleData?.summaryPoints || [];
+      
+      if (points.length === 0) {
+        container.innerHTML = '<div class="empty-list">No summary points</div>';
+        return;
+      }
+      
+      container.innerHTML = points.map((point, index) => \`
+        <div class="list-item" data-index="\${index}">
+          <div class="list-item-content">
+            <textarea placeholder="Summary statement..." onchange="updateSummaryPoint(\${index}, this.value)">\${point || ''}</textarea>
+          </div>
+          <button class="remove-btn" onclick="removeSummaryPoint(\${index})">×</button>
+        </div>
+      \`).join('');
+    }
+
+    function addSummaryPoint() {
+      if (!currentArticleData) return;
+      if (!currentArticleData.summaryPoints) {
+        currentArticleData.summaryPoints = [];
+      }
+      currentArticleData.summaryPoints.push('');
+      renderSummaryPointsList();
+    }
+
+    function removeSummaryPoint(index) {
+      if (!currentArticleData?.summaryPoints) return;
+      currentArticleData.summaryPoints.splice(index, 1);
+      renderSummaryPointsList();
+      updatePreview();
+    }
+
+    function updateSummaryPoint(index, value) {
+      if (!currentArticleData?.summaryPoints) return;
+      currentArticleData.summaryPoints[index] = value;
+      updatePreview();
     }
 
     function populateCustomizationForm(articleData) {
@@ -377,6 +553,10 @@ function generateDebugPage(templates: string[]): string {
       document.getElementById('flagBreaking').checked = !!articleData.isBreaking;
       document.getElementById('flagLive').checked = !!articleData.isLive;
       document.getElementById('flagDeveloping').checked = !!articleData.isDeveloping;
+
+      // Render narrative lists
+      renderAdditionalImagesList();
+      renderSummaryPointsList();
     }
 
     function buildCustomizedArticleData() {
@@ -403,6 +583,10 @@ function generateDebugPage(templates: string[]): string {
       customized.hideTags = !document.getElementById('showTags').checked;
       customized.hideStatusBadge = !document.getElementById('showStatus').checked;
       customized.hideLogo = !document.getElementById('showLogo').checked;
+
+      // Include narrative data (filter out empty entries)
+      customized.additionalImages = (currentArticleData.additionalImages || []).filter(img => img.src);
+      customized.summaryPoints = (currentArticleData.summaryPoints || []).filter(p => p.trim());
 
       return customized;
     }

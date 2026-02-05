@@ -193,6 +193,8 @@ function extractArticleData(article, site) {
     isBreaking: article.isBreaking || false,
     isLive: article.isLive || false,
     isDeveloping: article.isDeveloping || false,
+    additionalImages: Array.isArray(article.additionalImages) ? article.additionalImages : [],
+    summaryPoints: Array.isArray(article.summaryPoints) ? article.summaryPoints : [],
     // Site-specific data
     site: site,
     isRTL: config.isRTL,

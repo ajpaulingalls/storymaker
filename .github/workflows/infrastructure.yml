@@ -171,6 +171,8 @@ jobs:
               SOCIAL_PULSE_BEARER_TOKEN="${{ secrets.SOCIAL_PULSE_BEARER_TOKEN }}" \
               SOCIAL_PULSE_ACCOUNT_ID="${{ secrets.SOCIAL_PULSE_ACCOUNT_ID }}" \
               SOCIAL_PULSE_DATASOURCE_ID="${{ secrets.SOCIAL_PULSE_DATASOURCE_ID }}" \
+              CORTEX_API_URL="${{ secrets.CORTEX_API_URL }}" \
+              CORTEX_API_KEY="${{ secrets.CORTEX_API_KEY }}" \
             --output none
           
           # Enable container logging

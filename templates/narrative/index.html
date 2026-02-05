@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>Story - Narrative</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="/shared/base.css" />
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700&family=Roboto:wght@300;400;500;700&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap");
+
+      :root {
+        --accent-color: #fa9000;
+        --accent-color-alt: #e76f51;
+        --font-arabic: "Noto Sans Arabic";
+        --font-heading: "Noto Serif";
+        --font-body: "Roboto";
+        --transition-duration: 800ms;
+      }
+
+      body {
+        background: #0a0a0a;
+      }
+
+      body.rtl {
+        font-family: var(--font-arabic), var(--font-body), sans-serif;
+      }
+
+      .loading-text {
+        font-family: "Roboto", sans-serif;
+      }
+
+      /* Background Images Stack */
+      .bg-image-container {
+        direction: ltr;
+      }
+
+      .bg-image {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0;
+        transition: opacity var(--transition-duration) ease-in-out;
+        will-change: opacity, transform;
+      }
+
+      .bg-image.active {
+        opacity: 1;
+      }
+
+      .bg-image.zoom {
+        animation: slowZoom var(--ken-burns-duration, 20s) ease-out forwards;
+      }
+
+      @keyframes slowZoom {
+        0% { transform: scale(1); }
+        100% { transform: scale(1.12); }
+      }
+
+      /* Top bar with logo and status */
+      .top-bar {
+        position: absolute;
+        top: 60px;
+        left: 80px;
+        right: 80px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 100;
+        opacity: 0;
+        transform: translateY(-20px);
+        transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+      }
+
+      .top-bar.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      body.rtl .top-bar {
+        flex-direction: row-reverse;
+      }
+
+      .top-bar .logo {
+        margin-left: auto;
+      }
+
+      .top-bar .logo img {
+        height: 180px;
+        width: auto;
+      }
+
+      .top-bar .status-badge {
+        margin-right: auto;
+      }
+
+      .status-badge {
+        font-family: "Roboto", sans-serif;
+      }
+
+      /* Title Section - Always visible */
+      .title-section {
+        position: absolute;
+        top: 180px;
+        left: 80px;
+        right: 80px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        z-index: 50;
+        opacity: 0;
+        transform: translateY(30px);
+        transition: opacity var(--transition-duration) ease-out, transform var(--transition-duration) ease-out;
+      }
+
+      .title-section.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .title-section .tags {
+        display: flex;
+        gap: 16px;
+      }
+
+      body.rtl .title-section .tags {
+        margin-left: auto;
+      }
+
+      .tag {
+        font-family: "Roboto", sans-serif;
+        font-size: 26px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 3px;
+        padding: 10px 20px;
+        background: var(--accent-color);
+        color: #0a0a0a;
+        border-radius: 4px;
+      }
+
+      body.rtl .tag {
+        letter-spacing: 0;
+      }
+
+      .title-section .title {
+        font-family: "Noto Serif", serif;
+        font-size: 64px;
+        font-weight: 700;
+        line-height: 1.15;
+        color: #ffffff;
+        text-shadow: 2px 4px 20px rgba(0, 0, 0, 0.5);
+      }
+
+      body.rtl .title-section .title {
+        font-family: var(--font-arabic), var(--font-heading), serif;
+      }
+
+      .title-section .divider {
+        width: 100px;
+        height: 5px;
+        background: linear-gradient(90deg, var(--accent-color), var(--accent-color-alt));
+        border-radius: 3px;
+      }
+
+      body.rtl .title-section .divider {
+        margin-left: auto;
+        margin-right: 0;
+      }
+
+      /* Summary Section - Bottom area */
+      .summary-section {
+        position: absolute;
+        bottom: 160px;
+        left: 80px;
+        right: 80px;
+        z-index: 50;
+      }
+
+      .summary-point {
+        font-family: "Roboto", sans-serif;
+        font-size: 48px;
+        font-weight: 400;
+        line-height: 1.45;
+        color: #ffffff;
+        text-shadow: 2px 4px 30px rgba(0, 0, 0, 0.7);
+        max-width: 920px;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity var(--transition-duration) ease-out, transform var(--transition-duration) ease-out;
+      }
+
+      .summary-point.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      body.rtl .summary-point {
+        font-family: var(--font-arabic), var(--font-body), sans-serif;
+        margin-left: auto;
+      }
+
+      .summary-indicator {
+        display: flex;
+        gap: 12px;
+        margin-top: 40px;
+        opacity: 0;
+        transition: opacity 0.5s ease-out;
+      }
+
+      .summary-indicator.visible {
+        opacity: 1;
+      }
+
+      body.rtl .summary-indicator {
+        margin-left: auto;
+      }
+
+      .summary-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        transition: background 0.3s ease;
+      }
+
+      .summary-dot.active {
+        background: var(--accent-color);
+      }
+
+      .summary-dot.seen {
+        background: rgba(255, 255, 255, 0.6);
+      }
+
+      /* Footer with image credit */
+      .footer {
+        position: absolute;
+        bottom: 80px;
+        left: 80px;
+        right: 80px;
+        display: flex;
+        align-items: center;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+        opacity: 0;
+        transition: opacity 0.6s ease-out;
+        z-index: 50;
+      }
+
+      .footer.visible {
+        opacity: 1;
+      }
+
+      .image-credit {
+        font-family: "Roboto", sans-serif;
+        font-size: 24px;
+        font-weight: 400;
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      body.rtl .image-credit {
+        font-family: var(--font-arabic), var(--font-body), sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Loading State -->
+    <div class="loading-container" id="loading">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Loading story...</div>
+    </div>
+
+    <!-- Background Images (stacked) -->
+    <div class="bg-image-container" id="bgContainer">
+      <!-- Images will be added dynamically -->
+    </div>
+
+    <!-- Overlay -->
+    <div class="overlay"></div>
+
+    <!-- Top Bar -->
+    <div class="top-bar" id="topBar">
+      <div class="status-badge" id="statusBadge"></div>
+      <div class="logo" id="logo">
+        <img src="/shared/images/ajeWhite.png" alt="Al Jazeera" />
+      </div>
+    </div>
+
+    <!-- Title Section (stays visible) -->
+    <div class="title-section" id="titleSection">
+      <div class="tags" id="tags"></div>
+      <h1 class="title" id="title"></h1>
+      <div class="divider"></div>
+    </div>
+
+    <!-- Summary Section -->
+    <div class="summary-section" id="summarySection">
+      <p class="summary-point" id="summaryPoint"></p>
+      <div class="summary-indicator" id="summaryIndicator"></div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer" id="footer">
+      <div class="image-credit" id="imageCredit"></div>
+    </div>
+
+    <script src="/shared/story.js"></script>
+    <script src="/shared/components.js"></script>
+    <script>
+      const SC = window.StoryComponents;
+
+      // Configuration
+      const INITIAL_DELAY = 2000;       // 2 seconds before first summary point
+      const SUMMARY_DURATION = 7000;    // 7 seconds per summary point
+      const TRANSITION_BUFFER = 800;    // Match CSS transition duration
+      const MIN_DURATION = 12000;       // Minimum 12 seconds total
+
+      let allImages = [];
+      let currentImageIndex = 0;
+      let summaryPoints = [];
+      let articleDataRef = null;
+
+      async function preloadImages(urls) {
+        const promises = urls.map(url => SC.loadImage(url));
+        await Promise.all(promises);
+      }
+
+      function createBackgroundImages(container, images, kenBurnsDuration) {
+        container.innerHTML = "";
+        images.forEach((imgData, index) => {
+          const img = document.createElement("img");
+          img.className = "bg-image";
+          img.src = typeof imgData === "string" ? imgData : imgData.src;
+          img.alt = "";
+          img.style.setProperty("--ken-burns-duration", `${kenBurnsDuration}s`);
+          if (index === 0) {
+            img.classList.add("active", "zoom");
+          }
+          container.appendChild(img);
+        });
+      }
+
+      function showImage(index, isRTL) {
+        const images = document.querySelectorAll(".bg-image");
+        images.forEach((img, i) => {
+          if (i === index && !img.classList.contains("active")) {
+            img.classList.add("active");
+            // Restart zoom animation
+            void img.offsetWidth;
+            img.classList.add("zoom");
+          } else if (i !== index) {
+            img.classList.remove("active", "zoom");
+          }
+        });
+        currentImageIndex = index;
+        updateImageCredit(index, isRTL);
+      }
+
+      function updateImageCredit(imageIndex, isRTL) {
+        const creditEl = document.getElementById("imageCredit");
+        if (!creditEl) return;
+
+        const img = allImages[imageIndex];
+        if (img && img.credit) {
+          const prefix = isRTL ? "تصوير: " : "Photo: ";
+          creditEl.textContent = prefix + img.credit;
+        } else {
+          creditEl.textContent = "";
+        }
+      }
+
+      function createDotIndicators(total) {
+        const container = document.getElementById("summaryIndicator");
+        if (!container) return;
+        container.innerHTML = Array.from({ length: total }, () => 
+          `<div class="summary-dot"></div>`
+        ).join("");
+      }
+
+      function updateDotIndicator(index) {
+        const dots = document.querySelectorAll(".summary-dot");
+        dots.forEach((dot, i) => {
+          dot.classList.remove("active", "seen");
+          if (i < index) dot.classList.add("seen");
+          if (i === index) dot.classList.add("active");
+        });
+      }
+
+      function showSummaryPoint(text) {
+        const el = document.getElementById("summaryPoint");
+        if (!el) return;
+        
+        // Fade out
+        el.classList.remove("visible");
+        
+        setTimeout(() => {
+          el.textContent = text;
+          // Fade in
+          el.classList.add("visible");
+        }, TRANSITION_BUFFER / 2);
+      }
+
+      async function renderContent(articleData) {
+        SC.hideLoading();
+        SC.applyAccentColors(articleData);
+        SC.setStatusBadge("statusBadge", articleData);
+        articleDataRef = articleData;
+
+        // Set title
+        SC.setText("title", articleData.title);
+        
+        // Set tags
+        const tags = SC.getBasicTags(articleData);
+        SC.renderTags("tags", tags);
+
+        // Collect all images (main + additional)
+        allImages = [];
+        if (articleData.imageUrl) {
+          allImages.push({ src: articleData.imageUrl, credit: articleData.imageCredit });
+        }
+        if (Array.isArray(articleData.additionalImages)) {
+          articleData.additionalImages.forEach(img => {
+            if (img.src) allImages.push(img);
+          });
+        }
+
+        // Fallback if no images
+        if (allImages.length === 0) {
+          allImages.push({ src: "", credit: "" });
+        }
+
+        // Store summary points
+        summaryPoints = Array.isArray(articleData.summaryPoints) ? articleData.summaryPoints : [];
+
+        // Calculate Ken Burns duration based on content
+        // Each image should span multiple summary points
+        const numPoints = summaryPoints.length || 1;
+        const numImages = allImages.length;
+        const pointsPerImage = Math.ceil(numPoints / numImages);
+        const kenBurnsDuration = Math.max(20, pointsPerImage * (SUMMARY_DURATION / 1000) + 2);
+
+        // Preload all images
+        const imageUrls = allImages.filter(img => img.src).map(img => img.src);
+        if (imageUrls.length > 0) {
+          await preloadImages(imageUrls);
+        }
+
+        // Create background images
+        const bgContainer = document.getElementById("bgContainer");
+        createBackgroundImages(bgContainer, allImages, kenBurnsDuration);
+
+        // Create dot indicators
+        if (summaryPoints.length > 0) {
+          createDotIndicators(summaryPoints.length);
+        }
+
+        // Set initial image credit
+        updateImageCredit(0, articleData.isRTL);
+
+        // Apply visibility settings
+        SC.applyVisibility(articleData, {
+          statusBadge: "#statusBadge",
+          tags: "#tags",
+          title: "#title",
+          imageCredit: "#imageCredit",
+        });
+      }
+
+      async function animateContent() {
+        const topBar = document.getElementById("topBar");
+        const footer = document.getElementById("footer");
+        const titleSection = document.getElementById("titleSection");
+        const summaryIndicator = document.getElementById("summaryIndicator");
+        const isRTL = articleDataRef?.isRTL || false;
+
+        // Show top bar, title, and footer
+        topBar.classList.add("visible");
+        footer.classList.add("visible");
+        titleSection.classList.add("visible");
+
+        // Initial delay before showing summary points
+        await new Promise(resolve => setTimeout(resolve, INITIAL_DELAY));
+
+        const numPoints = summaryPoints.length;
+        const numImages = allImages.length;
+
+        if (numPoints === 0) {
+          // No summary points - just hold for minimum duration
+          await new Promise(resolve => setTimeout(resolve, MIN_DURATION - INITIAL_DELAY));
+          return;
+        }
+
+        // Calculate which summary points trigger image changes
+        // Show each image only once, spread across summary points
+        const pointsPerImage = Math.ceil(numPoints / numImages);
+
+        // Show summary indicator
+        summaryIndicator.classList.add("visible");
+
+        // Cycle through summary points
+        for (let i = 0; i < numPoints; i++) {
+          // Determine if we need to change the image
+          const imageIndex = Math.min(Math.floor(i / pointsPerImage), numImages - 1);
+          if (imageIndex !== currentImageIndex) {
+            showImage(imageIndex, isRTL);
+          }
+
+          // Update dot indicator
+          updateDotIndicator(i);
+
+          // Show the summary point
+          showSummaryPoint(summaryPoints[i]);
+
+          // Wait for this summary point
+          await new Promise(resolve => setTimeout(resolve, SUMMARY_DURATION));
+        }
+
+        // Hold final state briefly
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        window.StoryMaker.initStory({
+          renderContent,
+          animateContent
+        });
+      });
+    </script>
+  </body>
+</html>
