@@ -2,9 +2,9 @@ import { describe, expect, test, beforeEach } from "bun:test";
 import { generateJobId, InMemoryJobStore } from "./job-store";
 
 describe("generateJobId", () => {
-  test("returns a string with timestamp-random format", () => {
+  test("returns a valid UUID", () => {
     const id = generateJobId();
-    expect(id).toMatch(/^[a-z0-9]+-[a-z0-9]+$/);
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
   });
 
   test("generates unique IDs", () => {
@@ -107,27 +107,34 @@ describe("InMemoryJobStore", () => {
       expect(await store.get("old-1")).toBeNull();
     });
 
-    test("preserves pending and processing jobs regardless of age", async () => {
-      const oldDate = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    test("marks stuck pending/processing jobs as failed after 1 hour", async () => {
+      const oldDate = new Date(Date.now() - 2 * 60 * 60 * 1000); // 2 hours ago
 
       const pending = await store.create({
-        id: "keep-1",
+        id: "stuck-1",
         status: "pending",
         request: sampleRequest,
       });
       pending.updatedAt = oldDate;
 
       const processing = await store.create({
-        id: "keep-2",
+        id: "stuck-2",
         status: "processing",
         request: sampleRequest,
       });
       processing.updatedAt = oldDate;
 
-      const deleted = await store.cleanup(60 * 60 * 1000);
-      expect(deleted).toBe(0);
-      expect(await store.get("keep-1")).not.toBeNull();
-      expect(await store.get("keep-2")).not.toBeNull();
+      await store.cleanup(24 * 60 * 60 * 1000);
+
+      const job1 = await store.get("stuck-1");
+      expect(job1).not.toBeNull();
+      expect(job1!.status).toBe("failed");
+      expect(job1!.error).toBe("Job timed out");
+
+      const job2 = await store.get("stuck-2");
+      expect(job2).not.toBeNull();
+      expect(job2!.status).toBe("failed");
+      expect(job2!.error).toBe("Job timed out");
     });
 
     test("preserves recent completed/failed jobs", async () => {

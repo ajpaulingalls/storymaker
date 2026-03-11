@@ -38,9 +38,7 @@ export interface JobStore {
 
 // Generate a unique job ID
 export function generateJobId(): string {
-  const timestamp = Date.now().toString(36);
-  const random = Math.random().toString(36).substring(2, 8);
-  return `${timestamp}-${random}`;
+  return crypto.randomUUID();
 }
 
 /**
@@ -93,16 +91,29 @@ export class InMemoryJobStore implements JobStore {
   async cleanup(maxAgeMs: number): Promise<number> {
     const now = Date.now();
     const cutoff = now - maxAgeMs;
+    // Jobs stuck in pending/processing for more than 1 hour are considered stale
+    const stuckCutoff = now - 60 * 60 * 1000;
     let deleted = 0;
 
     for (const [id, job] of this.jobs.entries()) {
-      // Only clean up completed or failed jobs
+      // Clean up completed or failed jobs older than maxAge
       if (
         (job.status === "completed" || job.status === "failed") &&
         job.updatedAt.getTime() < cutoff
       ) {
         this.jobs.delete(id);
         deleted++;
+      }
+
+      // Mark stuck pending/processing jobs as failed
+      if (
+        (job.status === "pending" || job.status === "processing") &&
+        job.updatedAt.getTime() < stuckCutoff
+      ) {
+        job.status = "failed";
+        job.error = "Job timed out";
+        job.updatedAt = new Date();
+        console.log(`[Job Store] Marked stuck job as failed: ${id}`);
       }
     }
 

@@ -266,7 +266,9 @@ export const expandShortUrl = async (url: string): Promise<string> => {
 
 // Helper function to set URL parameter (update existing or add new)
 export const setUrlParameter = (url: string, paramName: string, paramValue: string): string => {
-  const regex = new RegExp(`([?&])${paramName}=[^&]*`, "g");
+  // Escape special regex characters in paramName to prevent regex injection
+  const escapedName = paramName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(`([?&])${escapedName}=[^&]*`, "g");
   if (url.match(regex)) {
     // Parameter exists, replace its value
     return url.replace(regex, `$1${paramName}=${paramValue}`);

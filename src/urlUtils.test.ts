@@ -329,4 +329,10 @@ describe("setUrlParameter", () => {
       "https://example.com?a=1&foo=new&b=2",
     );
   });
+
+  test("handles param names with regex special characters safely", () => {
+    const url = "https://example.com?a.b=old";
+    const result = setUrlParameter(url, "a.b", "new");
+    expect(result).toBe("https://example.com?a.b=new");
+  });
 });

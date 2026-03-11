@@ -1,5 +1,5 @@
 import type { Server } from "bun";
-import { join, extname } from "path";
+import { join, extname, resolve } from "path";
 import { readdirSync } from "fs";
 import { recordStory, type RecorderProgress } from "./recorder";
 import { startPersistentServer, buildTemplateUrl } from "./server";
@@ -1121,14 +1121,14 @@ function generateReviewPage(params: {
       <div class="video-section">
         <h2>Video Preview</h2>
         <video controls autoplay muted loop>
-          <source src="${params.videoUrl}" type="video/mp4">
+          <source src="${escapeHtml(params.videoUrl)}" type="video/mp4">
           Your browser does not support the video tag.
         </video>
       </div>
-      
+
       <div class="thumbnail-section">
         <h2>Thumbnail</h2>
-        <img src="${params.thumbnailUrl}" alt="Video thumbnail">
+        <img src="${escapeHtml(params.thumbnailUrl)}" alt="Video thumbnail">
       </div>
     </div>
     
@@ -1158,16 +1158,16 @@ function generateReviewPage(params: {
   
   <script>
     const publishData = {
-      videoUrl: ${JSON.stringify(params.videoUrl)},
-      thumbnailUrl: ${JSON.stringify(params.thumbnailUrl)},
-      articleUrl: ${JSON.stringify(params.articleUrl)},
-      title: ${JSON.stringify(params.title)},
-      summary: ${JSON.stringify(params.summary)},
-      category: ${JSON.stringify(params.category)},
-      keywords: ${JSON.stringify(params.keywords)},
-      postingCategory: ${JSON.stringify(params.postingCategory)},
-      publishedDate: ${JSON.stringify(params.publishedDate)},
-      slug: ${JSON.stringify(params.slug)}
+      videoUrl: ${JSON.stringify(params.videoUrl).replace(/</g, "\\u003c")},
+      thumbnailUrl: ${JSON.stringify(params.thumbnailUrl).replace(/</g, "\\u003c")},
+      articleUrl: ${JSON.stringify(params.articleUrl).replace(/</g, "\\u003c")},
+      title: ${JSON.stringify(params.title).replace(/</g, "\\u003c")},
+      summary: ${JSON.stringify(params.summary).replace(/</g, "\\u003c")},
+      category: ${JSON.stringify(params.category).replace(/</g, "\\u003c")},
+      keywords: ${JSON.stringify(params.keywords).replace(/</g, "\\u003c")},
+      postingCategory: ${JSON.stringify(params.postingCategory).replace(/</g, "\\u003c")},
+      publishedDate: ${JSON.stringify(params.publishedDate).replace(/</g, "\\u003c")},
+      slug: ${JSON.stringify(params.slug).replace(/</g, "\\u003c")}
     };
     
     function goBack() {
@@ -1243,6 +1243,9 @@ export interface CreateVideoRequest {
 // Internal template server
 let templateServer: Server<undefined>;
 
+// Web service server (used for building local URLs)
+let webServer: Server<undefined> | null = null;
+
 // Job store instance
 let jobStore: JobStore;
 
@@ -1257,14 +1260,15 @@ const CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
 
 function generateVideoFilename(): string {
   const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 8);
+  const random = crypto.randomUUID().slice(0, 8);
   return `${timestamp}-${random}.mp4`;
 }
 
 /**
  * Process a video job in the background
+ * @param baseUrl - The base URL of this web service (e.g., "http://localhost:8080"), derived from the server's own port rather than request headers to prevent Host header injection.
  */
-async function processVideoJob(job: Job, req: Request): Promise<void> {
+async function processVideoJob(job: Job, baseUrl: string): Promise<void> {
   try {
     // Update status to processing
     await jobStore.update(job.id, {
@@ -1288,13 +1292,11 @@ async function processVideoJob(job: Job, req: Request): Promise<void> {
     // Build template URL (use preview when customized data is provided)
     let templateUrl: string;
     if (job.request.articleData) {
-      const host = req.headers.get("host") || "localhost:8080";
-      const protocol = req.headers.get("x-forwarded-proto") || "http";
       const params = new URLSearchParams({
         template: job.request.template,
         jobId: job.id,
       });
-      templateUrl = `${protocol}://${host}/preview?${params.toString()}`;
+      templateUrl = `${baseUrl}/preview?${params.toString()}`;
     } else {
       const port = templateServer.port;
       if (!port) {
@@ -1391,26 +1393,22 @@ async function processVideoJob(job: Job, req: Request): Promise<void> {
         } else {
           // Blob upload failed, fall back to local URL
           console.warn(`[Job ${job.id}] Blob upload failed, falling back to local URL`);
-          const host = req.headers.get("host") || "localhost:8080";
-          const protocol = req.headers.get("x-forwarded-proto") || "http";
-          videoUrl = `${protocol}://${host}/videos/${filename}`;
+          videoUrl = `${baseUrl}/videos/${filename}`;
 
           // Local thumbnail URL if available
           if (result.thumbnailPath) {
             const thumbnailFilename = filename.replace(/\.mp4$/, ".jpg");
-            thumbnailUrl = `${protocol}://${host}/videos/${thumbnailFilename}`;
+            thumbnailUrl = `${baseUrl}/videos/${thumbnailFilename}`;
           }
         }
       } else {
         // Blob storage not configured, use local URL
-        const host = req.headers.get("host") || "localhost:8080";
-        const protocol = req.headers.get("x-forwarded-proto") || "http";
-        videoUrl = `${protocol}://${host}/videos/${filename}`;
+        videoUrl = `${baseUrl}/videos/${filename}`;
 
         // Local thumbnail URL if available
         if (result.thumbnailPath) {
           const thumbnailFilename = filename.replace(/\.mp4$/, ".jpg");
-          thumbnailUrl = `${protocol}://${host}/videos/${thumbnailFilename}`;
+          thumbnailUrl = `${baseUrl}/videos/${thumbnailFilename}`;
         }
       }
 
@@ -1478,8 +1476,12 @@ async function handleCreateVideo(req: Request): Promise<Response> {
       `[API] Created job ${jobId} for: ${body.site}/${body.postType}/${body.slug} (template: ${body.template})`,
     );
 
+    // Derive base URL from server's own port (not request headers) to prevent Host header injection
+    const serverPort = webServer?.port || 8080;
+    const baseUrl = `http://localhost:${serverPort}`;
+
     // Spawn background processing (don't await)
-    processVideoJob(job, req).catch((error) => {
+    processVideoJob(job, baseUrl).catch((error) => {
       console.error(`[Job ${jobId}] Unhandled error in background processing:`, error);
     });
 
@@ -1488,7 +1490,7 @@ async function handleCreateVideo(req: Request): Promise<Response> {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error(`[API] Error: ${errorMessage}`);
-    return Response.json({ success: false, error: errorMessage }, { status: 500 });
+    return Response.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -1532,13 +1534,13 @@ async function handleGetJob(jobId: string): Promise<Response> {
 async function serveVideo(pathname: string): Promise<Response> {
   const videosDir = join(import.meta.dir, "..", "videos");
   const filename = pathname.replace("/videos/", "");
-  const filePath = join(videosDir, filename);
 
-  // Prevent directory traversal
+  // Prevent directory traversal — check before constructing path
   if (filename.includes("..") || filename.includes("/")) {
     return new Response("Forbidden", { status: 403 });
   }
 
+  const filePath = join(videosDir, filename);
   const file = Bun.file(filePath);
   if (await file.exists()) {
     const ext = extname(filePath);
@@ -1667,7 +1669,7 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
         } catch (error) {
           const message = error instanceof Error ? error.message : "Failed to fetch article data";
           console.error("[Web Service] Error fetching article data:", message);
-          return Response.json({ error: message }, { status: 500 });
+          return Response.json({ error: "Failed to fetch article data" }, { status: 500 });
         }
       }
 
@@ -1758,7 +1760,7 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : "Unknown error";
           console.error(`[Web Service] Publish error: ${errorMessage}`);
-          return Response.json({ error: `Failed to publish: ${errorMessage}` }, { status: 500 });
+          return Response.json({ error: "Failed to publish video" }, { status: 500 });
         }
       }
 
@@ -1795,8 +1797,13 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
         }
 
         const templatePath = join(templatesDir, template, "index.html");
-        const file = Bun.file(templatePath);
 
+        // Prevent path traversal
+        if (!resolve(templatePath).startsWith(resolve(templatesDir))) {
+          return new Response("Forbidden", { status: 403 });
+        }
+
+        const file = Bun.file(templatePath);
         if (await file.exists()) {
           let html = await file.text();
 
@@ -1830,13 +1837,13 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
     // Preview mode - mock recording functions
     window.storyReady = () => Promise.resolve();
     window.storyDone = () => Promise.resolve();
-    
+
     // Preview mode - override URL params for the template
     window.DEBUG_URL_PARAMS = {
-      site: "${site}",
-      postType: "${postType}",
-      postSlug: "${postSlug}",
-      update: "${update}"
+      site: ${JSON.stringify(site).replace(/</g, "\\u003c")},
+      postType: ${JSON.stringify(postType).replace(/</g, "\\u003c")},
+      postSlug: ${JSON.stringify(postSlug).replace(/</g, "\\u003c")},
+      update: ${JSON.stringify(update).replace(/</g, "\\u003c")}
     };
   </script>
 </head>`;
@@ -1856,8 +1863,13 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
       if (pathname.startsWith("/shared/")) {
         const relativePath = pathname.slice(1); // Remove leading /
         const filePath = join(templatesDir, relativePath);
-        const file = Bun.file(filePath);
 
+        // Prevent path traversal
+        if (!resolve(filePath).startsWith(resolve(templatesDir))) {
+          return new Response("Forbidden", { status: 403 });
+        }
+
+        const file = Bun.file(filePath);
         if (await file.exists()) {
           const ext = extname(pathname);
           const contentType = MIME_TYPES[ext] || "application/octet-stream";
@@ -1980,6 +1992,7 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
   console.log(`   Storage: ${blobEnabled ? "Azure Blob Storage" : "Local filesystem"}`);
   console.log(`   Job Store: ${isTableStorageEnabled() ? "Azure Table Storage" : "In-memory"}\n`);
 
+  webServer = server;
   return server;
 }
 
@@ -1987,6 +2000,7 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
  * Stop the web service and clean up resources
  */
 export function stopWebService(server: Server<undefined>): void {
+  webServer = null;
   server.stop(true);
   if (cleanupInterval) {
     clearInterval(cleanupInterval);

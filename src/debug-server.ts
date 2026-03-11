@@ -1,5 +1,5 @@
 import type { Server } from "bun";
-import { join, extname } from "path";
+import { join, extname, resolve } from "path";
 import { readdirSync } from "fs";
 import {
   getSiteFromAJLink,
@@ -933,14 +933,14 @@ export async function startDebugServer(port: number = 3333): Promise<Server<unkn
     
     // Debug mode - override URL params for the template
     window.DEBUG_URL_PARAMS = {
-      site: "${site}",
-      postType: "${postType}",
-      postSlug: "${postSlug}",
-      update: "${update}"
+      site: ${JSON.stringify(site).replace(/</g, "\\u003c")},
+      postType: ${JSON.stringify(postType).replace(/</g, "\\u003c")},
+      postSlug: ${JSON.stringify(postSlug).replace(/</g, "\\u003c")},
+      update: ${JSON.stringify(update).replace(/</g, "\\u003c")}
     };
-    
+
     // Override status flags if set
-    window.DEBUG_FLAG_OVERRIDES = ${JSON.stringify(flags)};
+    window.DEBUG_FLAG_OVERRIDES = ${JSON.stringify(flags).replace(/</g, "\\u003c")};
   </script>
 </head>`;
           }
@@ -959,8 +959,12 @@ export async function startDebugServer(port: number = 3333): Promise<Server<unkn
       if (pathname.startsWith("/shared/")) {
         const relativePath = pathname.slice(1);
         const filePath = join(templatesDir, relativePath);
-        const file = Bun.file(filePath);
 
+        if (!resolve(filePath).startsWith(resolve(templatesDir))) {
+          return new Response("Forbidden", { status: 403 });
+        }
+
+        const file = Bun.file(filePath);
         if (await file.exists()) {
           const ext = extname(pathname);
           const contentType = MIME_TYPES[ext] || "application/octet-stream";
@@ -979,8 +983,12 @@ export async function startDebugServer(port: number = 3333): Promise<Server<unkn
           return new Response("File not found", { status: 404 });
         }
         const filePath = join(templatesDir, template, parts.slice(1).join("/") || "index.html");
-        const file = Bun.file(filePath);
 
+        if (!resolve(filePath).startsWith(resolve(templatesDir))) {
+          return new Response("Forbidden", { status: 403 });
+        }
+
+        const file = Bun.file(filePath);
         if (await file.exists()) {
           const ext = extname(filePath);
           const contentType = MIME_TYPES[ext] || "application/octet-stream";

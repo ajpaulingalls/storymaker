@@ -1,5 +1,5 @@
 import type { Server } from "bun";
-import { join, extname } from "path";
+import { join, extname, resolve } from "path";
 import { MIME_TYPES } from "./mime-types";
 
 export interface TemplateServerOptions {
@@ -45,8 +45,13 @@ export async function startPersistentServer(port: number = 3456): Promise<Server
       if (pathname.startsWith("/shared/")) {
         const relativePath = pathname.slice(1); // Remove leading /
         const filePath = join(templatesDir, relativePath);
-        const file = Bun.file(filePath);
 
+        // Prevent path traversal
+        if (!resolve(filePath).startsWith(resolve(templatesDir))) {
+          return new Response("Forbidden", { status: 403 });
+        }
+
+        const file = Bun.file(filePath);
         if (await file.exists()) {
           const ext = extname(pathname);
           const contentType = MIME_TYPES[ext] || "application/octet-stream";
@@ -68,8 +73,13 @@ export async function startPersistentServer(port: number = 3456): Promise<Server
       // Determine what file to serve
       const relativePath = pathParts.slice(1).join("/") || "index.html";
       const filePath = join(templatesDir, template, relativePath);
-      const file = Bun.file(filePath);
 
+      // Prevent path traversal
+      if (!resolve(filePath).startsWith(resolve(templatesDir))) {
+        return new Response("Forbidden", { status: 403 });
+      }
+
+      const file = Bun.file(filePath);
       if (await file.exists()) {
         const ext = extname(filePath);
         const contentType = MIME_TYPES[ext] || "application/octet-stream";
@@ -125,6 +135,11 @@ export async function startServer(options: TemplateServerOptions): Promise<{
       if (pathname.startsWith("/shared/")) {
         const relativePath = pathname.slice(1); // Remove leading /
         const filePath = join(templatesDir, relativePath);
+
+        if (!resolve(filePath).startsWith(resolve(templatesDir))) {
+          return new Response("Forbidden", { status: 403 });
+        }
+
         console.log(`[Server] Serving shared file: ${filePath}`);
         const file = Bun.file(filePath);
 
@@ -142,6 +157,11 @@ export async function startServer(options: TemplateServerOptions): Promise<{
       // Serve template-specific files
       const relativePath = pathname.slice(1); // Remove leading /
       const filePath = join(templatesDir, options.template, relativePath);
+
+      if (!resolve(filePath).startsWith(resolve(templatesDir))) {
+        return new Response("Forbidden", { status: 403 });
+      }
+
       console.log(`[Server] Serving template file: ${filePath}`);
       const file = Bun.file(filePath);
 
