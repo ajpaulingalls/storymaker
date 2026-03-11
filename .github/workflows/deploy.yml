@@ -13,7 +13,7 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,7 +28,7 @@ jobs:
         run: |
           # Use same naming convention as infrastructure workflow
           APP_NAME_CLEAN=$(echo "${{ env.APP_NAME }}" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]')
-          
+
           echo "acr_name=${APP_NAME_CLEAN}acr" >> $GITHUB_OUTPUT
           echo "web_app_name=${{ env.APP_NAME }}-app" >> $GITHUB_OUTPUT
 
@@ -61,19 +61,19 @@ jobs:
       - name: Deploy to App Service
         run: |
           echo "Deploying to App Service..."
-          
+
           # Update the container image
           az webapp config container set \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --name "${{ steps.names.outputs.web_app_name }}" \
             --docker-custom-image-name "${{ steps.acr.outputs.login_server }}/${{ env.APP_NAME }}:${{ github.sha }}" \
             --output none
-          
+
           # Restart the app to pull the new image
           az webapp restart \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --name "${{ steps.names.outputs.web_app_name }}"
-          
+
           echo "Deployment complete"
 
       - name: Output Deployment Info

@@ -190,7 +190,10 @@ async function generateSummaryPoints(content: string): Promise<string[]> {
     if (rawResultData) {
       const parsed = JSON.parse(rawResultData);
       if (Array.isArray(parsed)) {
-        return parsed.filter((item) => typeof item === "string").map((item) => item.trim()).filter(Boolean);
+        return parsed
+          .filter((item) => typeof item === "string")
+          .map((item) => item.trim())
+          .filter(Boolean);
       }
     }
 
@@ -277,7 +280,9 @@ function extractArticleData(article: Record<string, any>, site: string): Article
     imageUrl = getFullImageUrl(article.featuredImage.sourceUrl, site);
   }
   if (article.socialMediaImage?.sizes) {
-    const size16x9 = article.socialMediaImage.sizes.find((size: { crop?: string }) => size.crop === "arc-image-16-9-1920");
+    const size16x9 = article.socialMediaImage.sizes.find(
+      (size: { crop?: string }) => size.crop === "arc-image-16-9-1920",
+    );
     if (size16x9?.url) {
       imageUrl = getFullImageUrl(size16x9.url, site);
     }
@@ -296,7 +301,10 @@ function extractArticleData(article: Record<string, any>, site: string): Article
     location: article.primaryWhereTermName || "",
     tag: article.primaryTagsTermName || "",
     date: article.date ? new Date(article.date).toISOString() : null,
-    source: article.source?.[0]?.name || article.writeInAuthor || (config.isRTL ? "الجزيرة" : "Al Jazeera"),
+    source:
+      article.source?.[0]?.name ||
+      article.writeInAuthor ||
+      (config.isRTL ? "الجزيرة" : "Al Jazeera"),
     isBreaking: article.isBreaking || false,
     isLive: article.isLive || false,
     isDeveloping: article.isDeveloping || false,
@@ -310,7 +318,9 @@ function extractArticleData(article: Record<string, any>, site: string): Article
   };
 }
 
-export async function fetchArticleDataForTemplate(options: FetchArticleOptions): Promise<ArticleData> {
+export async function fetchArticleDataForTemplate(
+  options: FetchArticleOptions,
+): Promise<ArticleData> {
   const { site, postType, postSlug, update } = options;
   if (!site || !postType || !postSlug) {
     throw new Error("Missing required parameters: site, postType, postSlug");

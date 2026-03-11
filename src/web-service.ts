@@ -53,8 +53,8 @@ const templatesDir = join(import.meta.dir, "..", "templates");
  */
 function getAvailableTemplates(): string[] {
   return readdirSync(templatesDir, { withFileTypes: true })
-    .filter(dirent => dirent.isDirectory() && dirent.name !== "shared")
-    .map(dirent => dirent.name);
+    .filter((dirent) => dirent.isDirectory() && dirent.name !== "shared")
+    .map((dirent) => dirent.name);
 }
 
 /**
@@ -356,7 +356,7 @@ function generateStoryMakerPage(templates: string[]): string {
     <h2>Template</h2>
     <div class="control-group">
       <select id="templateSelect">
-        ${templates.map(t => `<option value="${t}">${t}</option>`).join('\n        ')}
+        ${templates.map((t) => `<option value="${t}">${t}</option>`).join("\n        ")}
       </select>
     </div>
     
@@ -1235,11 +1235,11 @@ function generateReviewPage(params: {
 // Helper function to escape HTML
 function escapeHtml(text: string): string {
   return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 export interface CreateVideoRequest {
@@ -1278,9 +1278,15 @@ function generateVideoFilename(): string {
 async function processVideoJob(job: Job, req: Request): Promise<void> {
   try {
     // Update status to processing
-    await jobStore.update(job.id, { status: "processing", progress: "Initializing", progressPercent: 10 });
+    await jobStore.update(job.id, {
+      status: "processing",
+      progress: "Initializing",
+      progressPercent: 10,
+    });
 
-    console.log(`[Job ${job.id}] Starting video creation for: ${job.request.site}/${job.request.postType}/${job.request.slug}`);
+    console.log(
+      `[Job ${job.id}] Starting video creation for: ${job.request.site}/${job.request.postType}/${job.request.slug}`,
+    );
 
     // Generate unique filename
     const filename = generateVideoFilename();
@@ -1334,12 +1340,14 @@ async function processVideoJob(job: Job, req: Request): Promise<void> {
           complete: "Recording complete",
         };
         const message = phaseMessages[progress.phase] || progress.phase;
-        
+
         // Update job with progress (don't await to avoid slowing down recording)
-        jobStore.update(job.id, { 
-          progress: message, 
-          progressPercent: progress.percent 
-        }).catch(() => {}); // Ignore errors
+        jobStore
+          .update(job.id, {
+            progress: message,
+            progressPercent: progress.percent,
+          })
+          .catch(() => {}); // Ignore errors
       },
     });
 
@@ -1379,9 +1387,13 @@ async function processVideoJob(job: Job, req: Request): Promise<void> {
               // Delete the local thumbnail temp file
               try {
                 await Bun.$`rm ${result.thumbnailPath}`.quiet();
-                console.log(`[Job ${job.id}] Deleted local thumbnail file: ${result.thumbnailPath}`);
+                console.log(
+                  `[Job ${job.id}] Deleted local thumbnail file: ${result.thumbnailPath}`,
+                );
               } catch {
-                console.warn(`[Job ${job.id}] Failed to delete thumbnail file: ${result.thumbnailPath}`);
+                console.warn(
+                  `[Job ${job.id}] Failed to delete thumbnail file: ${result.thumbnailPath}`,
+                );
               }
             } else {
               console.warn(`[Job ${job.id}] Thumbnail upload failed`);
@@ -1393,7 +1405,7 @@ async function processVideoJob(job: Job, req: Request): Promise<void> {
           const host = req.headers.get("host") || "localhost:8080";
           const protocol = req.headers.get("x-forwarded-proto") || "http";
           videoUrl = `${protocol}://${host}/videos/${filename}`;
-          
+
           // Local thumbnail URL if available
           if (result.thumbnailPath) {
             const thumbnailFilename = filename.replace(/\.mp4$/, ".jpg");
@@ -1405,7 +1417,7 @@ async function processVideoJob(job: Job, req: Request): Promise<void> {
         const host = req.headers.get("host") || "localhost:8080";
         const protocol = req.headers.get("x-forwarded-proto") || "http";
         videoUrl = `${protocol}://${host}/videos/${filename}`;
-        
+
         // Local thumbnail URL if available
         if (result.thumbnailPath) {
           const thumbnailFilename = filename.replace(/\.mp4$/, ".jpg");
@@ -1454,7 +1466,7 @@ async function handleCreateVideo(req: Request): Promise<Response> {
     if (missing.length > 0) {
       return Response.json(
         { success: false, error: `Missing required fields: ${missing.join(", ")}` },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -1473,7 +1485,9 @@ async function handleCreateVideo(req: Request): Promise<Response> {
       },
     });
 
-    console.log(`[API] Created job ${jobId} for: ${body.site}/${body.postType}/${body.slug} (template: ${body.template})`);
+    console.log(
+      `[API] Created job ${jobId} for: ${body.site}/${body.postType}/${body.slug} (template: ${body.template})`,
+    );
 
     // Spawn background processing (don't await)
     processVideoJob(job, req).catch((error) => {
@@ -1485,10 +1499,7 @@ async function handleCreateVideo(req: Request): Promise<Response> {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error(`[API] Error: ${errorMessage}`);
-    return Response.json(
-      { success: false, error: errorMessage },
-      { status: 500 }
-    );
+    return Response.json({ success: false, error: errorMessage }, { status: 500 });
   }
 }
 
@@ -1496,10 +1507,7 @@ async function handleGetJob(jobId: string): Promise<Response> {
   const job = await jobStore.get(jobId);
 
   if (!job) {
-    return Response.json(
-      { success: false, error: "Job not found" },
-      { status: 404 }
-    );
+    return Response.json({ success: false, error: "Job not found" }, { status: 404 });
   }
 
   // Build response based on job status
@@ -1677,15 +1685,20 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
       // API endpoint: publish to Social Pulse
       if (pathname === "/api/publish" && method === "POST") {
         // Check if Social Pulse is configured
-        if (!SOCIAL_PULSE_API_URL || !SOCIAL_PULSE_BEARER_TOKEN || !SOCIAL_PULSE_ACCOUNT_ID || !SOCIAL_PULSE_DATASOURCE_ID) {
+        if (
+          !SOCIAL_PULSE_API_URL ||
+          !SOCIAL_PULSE_BEARER_TOKEN ||
+          !SOCIAL_PULSE_ACCOUNT_ID ||
+          !SOCIAL_PULSE_DATASOURCE_ID
+        ) {
           return Response.json(
             { error: "Social Pulse integration is not configured" },
-            { status: 503 }
+            { status: 503 },
           );
         }
 
         try {
-          const body = await req.json() as {
+          const body = (await req.json()) as {
             videoUrl: string;
             thumbnailUrl: string;
             articleUrl: string;
@@ -1702,7 +1715,7 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
           if (!body.videoUrl || !body.title || !body.slug) {
             return Response.json(
               { error: "Missing required fields: videoUrl, title, slug" },
-              { status: 400 }
+              { status: 400 },
             );
           }
 
@@ -1726,14 +1739,16 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
             isActive: true,
           };
 
-          console.log(`[Web Service] Publishing to Social Pulse: ${body.title} at endpoint ${SOCIAL_PULSE_API_URL}/api/topics`);
+          console.log(
+            `[Web Service] Publishing to Social Pulse: ${body.title} at endpoint ${SOCIAL_PULSE_API_URL}/api/topics`,
+          );
 
           // POST to Social Pulse API
           const response = await fetch(`${SOCIAL_PULSE_API_URL}/api/topics`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${SOCIAL_PULSE_BEARER_TOKEN}`,
+              Authorization: `Bearer ${SOCIAL_PULSE_BEARER_TOKEN}`,
             },
             body: JSON.stringify(payload),
           });
@@ -1743,7 +1758,7 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
             console.error(`[Web Service] Social Pulse error: ${response.status} - ${errorText}`);
             return Response.json(
               { error: `Social Pulse API error: ${response.status}` },
-              { status: response.status }
+              { status: response.status },
             );
           }
 
@@ -1754,20 +1769,17 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : "Unknown error";
           console.error(`[Web Service] Publish error: ${errorMessage}`);
-          return Response.json(
-            { error: `Failed to publish: ${errorMessage}` },
-            { status: 500 }
-          );
+          return Response.json({ error: `Failed to publish: ${errorMessage}` }, { status: 500 });
         }
       }
 
       // Preview endpoint: serve template with debug script injection
       if (pathname === "/preview" && (method === "GET" || method === "POST")) {
         let template = url.searchParams.get("template") || "default";
-        let site = url.searchParams.get("site") || "aje";
-        let postType = url.searchParams.get("postType") || "post";
-        let postSlug = url.searchParams.get("postSlug") || "";
-        let update = url.searchParams.get("update") || "";
+        const site = url.searchParams.get("site") || "aje";
+        const postType = url.searchParams.get("postType") || "post";
+        const postSlug = url.searchParams.get("postSlug") || "";
+        const update = url.searchParams.get("update") || "";
         let articleData: ArticleData | null = null;
 
         // Track if this is a recording request (jobId present) - don't mock storyReady/storyDone
@@ -1775,10 +1787,10 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
 
         if (method === "POST") {
           try {
-            const body = await req.json() as { template?: string; articleData?: ArticleData };
+            const body = (await req.json()) as { template?: string; articleData?: ArticleData };
             template = body.template || template;
             articleData = body.articleData || null;
-          } catch (error) {
+          } catch (_error) {
             return new Response("Invalid preview payload", { status: 400 });
           }
         } else {
@@ -1958,7 +1970,8 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
                 date: "string | null (ISO)",
               },
             },
-            "GET /videos/{filename}": "Serve generated videos (fallback when blob storage unavailable)",
+            "GET /videos/{filename}":
+              "Serve generated videos (fallback when blob storage unavailable)",
             "GET /health": "Health check endpoint",
           },
         });

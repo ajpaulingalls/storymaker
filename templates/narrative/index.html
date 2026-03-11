@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1080, height=1920" />
     <title>Story - Narrative</title>
-    <link rel="icon" href="data:,">
+    <link rel="icon" href="data:," />
     <link rel="stylesheet" href="/shared/base.css" />
     <style>
       @import url("https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700&family=Roboto:wght@300;400;500;700&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap");
@@ -56,8 +56,12 @@
       }
 
       @keyframes slowZoom {
-        0% { transform: scale(1); }
-        100% { transform: scale(1.12); }
+        0% {
+          transform: scale(1);
+        }
+        100% {
+          transform: scale(1.12);
+        }
       }
 
       /* Top bar with logo and status */
@@ -72,7 +76,9 @@
         z-index: 100;
         opacity: 0;
         transform: translateY(-20px);
-        transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        transition:
+          opacity 0.6s ease-out,
+          transform 0.6s ease-out;
       }
 
       .top-bar.visible {
@@ -113,7 +119,9 @@
         z-index: 50;
         opacity: 0;
         transform: translateY(30px);
-        transition: opacity var(--transition-duration) ease-out, transform var(--transition-duration) ease-out;
+        transition:
+          opacity var(--transition-duration) ease-out,
+          transform var(--transition-duration) ease-out;
       }
 
       .title-section.visible {
@@ -190,7 +198,9 @@
         max-width: 920px;
         opacity: 0;
         transform: translateY(20px);
-        transition: opacity var(--transition-duration) ease-out, transform var(--transition-duration) ease-out;
+        transition:
+          opacity var(--transition-duration) ease-out,
+          transform var(--transition-duration) ease-out;
       }
 
       .summary-point.visible {
@@ -313,11 +323,11 @@
       const SC = window.StoryComponents;
 
       // Configuration
-      const INITIAL_DELAY = 2000;       // 2 seconds before first summary point
-      const SUMMARY_DURATION = 7000;    // 7 seconds per summary point
-      const TRANSITION_BUFFER = 800;    // Match CSS transition duration
-      const MIN_DURATION = 12000;       // Minimum 12 seconds total
-      const FINAL_HOLD = 1000;          // Hold final state duration
+      const INITIAL_DELAY = 2000; // 2 seconds before first summary point
+      const SUMMARY_DURATION = 7000; // 7 seconds per summary point
+      const TRANSITION_BUFFER = 800; // Match CSS transition duration
+      const MIN_DURATION = 12000; // Minimum 12 seconds total
+      const FINAL_HOLD = 1000; // Hold final state duration
 
       let allImages = [];
       let currentImageIndex = 0;
@@ -328,16 +338,16 @@
        * Returns the total duration of the story in milliseconds.
        * Called by the recorder to determine total frames.
        */
-      window.getStoryDuration = function() {
+      window.getStoryDuration = function () {
         const numPoints = summaryPoints.length;
         if (numPoints === 0) {
           return MIN_DURATION;
         }
-        return INITIAL_DELAY + (numPoints * SUMMARY_DURATION) + FINAL_HOLD;
+        return INITIAL_DELAY + numPoints * SUMMARY_DURATION + FINAL_HOLD;
       };
 
       async function preloadImages(urls) {
-        const promises = urls.map(url => SC.loadImage(url));
+        const promises = urls.map((url) => SC.loadImage(url));
         await Promise.all(promises);
       }
 
@@ -388,8 +398,9 @@
       function createDotIndicators(total) {
         const container = document.getElementById("summaryIndicator");
         if (!container) return;
-        container.innerHTML = Array.from({ length: total }, () => 
-          `<div class="summary-dot"></div>`
+        container.innerHTML = Array.from(
+          { length: total },
+          () => `<div class="summary-dot"></div>`,
         ).join("");
       }
 
@@ -405,10 +416,10 @@
       function showSummaryPoint(text) {
         const el = document.getElementById("summaryPoint");
         if (!el) return;
-        
+
         // Fade out
         el.classList.remove("visible");
-        
+
         setTimeout(() => {
           el.textContent = text;
           // Fade in
@@ -424,7 +435,7 @@
 
         // Set title
         SC.setText("title", articleData.title);
-        
+
         // Set tags
         const tags = SC.getBasicTags(articleData);
         SC.renderTags("tags", tags);
@@ -435,7 +446,7 @@
           allImages.push({ src: articleData.imageUrl, credit: articleData.imageCredit });
         }
         if (Array.isArray(articleData.additionalImages)) {
-          articleData.additionalImages.forEach(img => {
+          articleData.additionalImages.forEach((img) => {
             if (img.src) allImages.push(img);
           });
         }
@@ -456,7 +467,7 @@
         const kenBurnsDuration = Math.max(20, pointsPerImage * (SUMMARY_DURATION / 1000) + 2);
 
         // Preload all images
-        const imageUrls = allImages.filter(img => img.src).map(img => img.src);
+        const imageUrls = allImages.filter((img) => img.src).map((img) => img.src);
         if (imageUrls.length > 0) {
           await preloadImages(imageUrls);
         }
@@ -495,14 +506,14 @@
         titleSection.classList.add("visible");
 
         // Initial delay before showing summary points
-        await new Promise(resolve => setTimeout(resolve, INITIAL_DELAY));
+        await new Promise((resolve) => setTimeout(resolve, INITIAL_DELAY));
 
         const numPoints = summaryPoints.length;
         const numImages = allImages.length;
 
         if (numPoints === 0) {
           // No summary points - just hold for minimum duration
-          await new Promise(resolve => setTimeout(resolve, MIN_DURATION - INITIAL_DELAY));
+          await new Promise((resolve) => setTimeout(resolve, MIN_DURATION - INITIAL_DELAY));
           return;
         }
 
@@ -528,17 +539,17 @@
           showSummaryPoint(summaryPoints[i]);
 
           // Wait for this summary point
-          await new Promise(resolve => setTimeout(resolve, SUMMARY_DURATION));
+          await new Promise((resolve) => setTimeout(resolve, SUMMARY_DURATION));
         }
 
         // Hold final state briefly
-        await new Promise(resolve => setTimeout(resolve, FINAL_HOLD));
+        await new Promise((resolve) => setTimeout(resolve, FINAL_HOLD));
       }
 
       document.addEventListener("DOMContentLoaded", () => {
         window.StoryMaker.initStory({
           renderContent,
-          animateContent
+          animateContent,
         });
       });
     </script>

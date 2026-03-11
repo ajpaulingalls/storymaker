@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1080, height=1920" />
     <title>Story</title>
-    <link rel="icon" href="data:,">
+    <link rel="icon" href="data:," />
     <link rel="stylesheet" href="/shared/base.css" />
     <style>
       @import url("https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap");
@@ -142,7 +142,8 @@
       }
 
       @keyframes pulse-text {
-        0%, 100% {
+        0%,
+        100% {
           opacity: 1;
         }
         50% {
@@ -209,7 +210,8 @@
       }
 
       @keyframes blink {
-        0%, 100% {
+        0%,
+        100% {
           opacity: 1;
         }
         50% {
@@ -243,7 +245,7 @@
         font-family: "Archivo Black", sans-serif;
         font-size: 76px;
         text-transform: uppercase;
-        line-height: 1.0;
+        line-height: 1;
         color: #fff;
         margin-bottom: 40px;
         opacity: 0;
@@ -392,7 +394,7 @@
        * Returns the total duration of the story in milliseconds.
        * Called by the recorder to determine total frames.
        */
-      window.getStoryDuration = function() {
+      window.getStoryDuration = function () {
         return STORY_DURATION;
       };
 
@@ -430,14 +432,14 @@
         if (articleData.date) {
           const isAr = articleData.isRTL;
           const options = {
-            timeZone: 'GMT',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
+            timeZone: "GMT",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
           };
-          const formatted = articleData.date.toLocaleString(isAr ? 'ar-SA' : 'en-US', options);
+          const formatted = articleData.date.toLocaleString(isAr ? "ar-SA" : "en-US", options);
           document.getElementById("date").textContent = `${formatted} GMT`;
         }
 

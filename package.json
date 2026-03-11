@@ -12,10 +12,21 @@
     "docker:run:basic": "docker run -p 8080:8080 storymaker:test",
     "docker:rebuild": "docker build --no-cache -t storymaker:test .",
     "docker:stop": "docker stop $(docker ps -q --filter ancestor=storymaker:test) 2>/dev/null || true",
-    "docker:update": "bun run docker:stop && bun run docker:build && bun run docker:run"
+    "docker:update": "bun run docker:stop && bun run docker:build && bun run docker:run",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "lefthook install"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@eslint/js": "^10.0.1",
+    "@types/bun": "latest",
+    "eslint": "^10.0.3",
+    "globals": "^17.4.0",
+    "lefthook": "^2.1.3",
+    "prettier": "^3.8.1",
+    "typescript-eslint": "^8.57.0"
   },
   "peerDependencies": {
     "typescript": "^5"

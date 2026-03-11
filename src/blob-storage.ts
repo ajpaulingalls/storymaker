@@ -12,15 +12,12 @@ let containerClient: ContainerClient | null = null;
  */
 function getContainerClient(): ContainerClient | null {
   if (!connectionString) {
-    console.warn(
-      "[Blob Storage] AZURE_STORAGE_CONNECTION_STRING not set - blob storage disabled"
-    );
+    console.warn("[Blob Storage] AZURE_STORAGE_CONNECTION_STRING not set - blob storage disabled");
     return null;
   }
 
   if (!containerClient) {
-    const blobServiceClient =
-      BlobServiceClient.fromConnectionString(connectionString);
+    const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
     containerClient = blobServiceClient.getContainerClient(containerName);
     console.log(`[Blob Storage] Initialized container: ${containerName}`);
   }
@@ -41,10 +38,7 @@ export function isBlobStorageEnabled(): boolean {
  * @param filename - Filename to use in blob storage
  * @returns The public URL of the uploaded blob, or null if upload failed
  */
-export async function uploadVideo(
-  localPath: string,
-  filename: string
-): Promise<string | null> {
+export async function uploadVideo(localPath: string, filename: string): Promise<string | null> {
   const client = getContainerClient();
   if (!client) {
     return null;
@@ -85,10 +79,7 @@ export async function uploadVideo(
  * @param filename - Filename to use in blob storage
  * @returns The public URL of the uploaded blob, or null if upload failed
  */
-export async function uploadThumbnail(
-  localPath: string,
-  filename: string
-): Promise<string | null> {
+export async function uploadThumbnail(localPath: string, filename: string): Promise<string | null> {
   const client = getContainerClient();
   if (!client) {
     return null;

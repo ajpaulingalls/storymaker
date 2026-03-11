@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1080, height=1920" />
     <title>Story</title>
-    <link rel="icon" href="data:,">
+    <link rel="icon" href="data:," />
     <link rel="stylesheet" href="/shared/base.css" />
     <style>
       @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Newsreader:wght@400;500;600&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap");
@@ -73,7 +73,12 @@
         left: 0;
         right: 0;
         height: 8px;
-        background: linear-gradient(90deg, var(--accent-color), var(--accent-color-alt), var(--accent-color));
+        background: linear-gradient(
+          90deg,
+          var(--accent-color),
+          var(--accent-color-alt),
+          var(--accent-color)
+        );
         transform: scaleX(0);
         transform-origin: left;
         animation: expandLine 0.8s ease-out 1s forwards;
@@ -297,7 +302,7 @@
        * Returns the total duration of the story in milliseconds.
        * Called by the recorder to determine total frames.
        */
-      window.getStoryDuration = function() {
+      window.getStoryDuration = function () {
         return STORY_DURATION;
       };
 

@@ -1,7 +1,14 @@
 import type { Server } from "bun";
 import { join, extname } from "path";
 import { readdirSync } from "fs";
-import { getSiteFromAJLink, getPostTypeFromLink, getSlugFromLink, isShortUrl, expandShortUrl, getUrlParams } from "./urlUtils";
+import {
+  getSiteFromAJLink,
+  getPostTypeFromLink,
+  getSlugFromLink,
+  isShortUrl,
+  expandShortUrl,
+  getUrlParams,
+} from "./urlUtils";
 import { fetchArticleDataForTemplate, type ArticleData } from "./article-fetcher";
 
 const MIME_TYPES: Record<string, string> = {
@@ -24,8 +31,8 @@ const DEFAULT_CONTENT = {
 function getAvailableTemplates(): string[] {
   const templatesDir = join(import.meta.dir, "..", "templates");
   return readdirSync(templatesDir, { withFileTypes: true })
-    .filter(dirent => dirent.isDirectory() && dirent.name !== "shared")
-    .map(dirent => dirent.name);
+    .filter((dirent) => dirent.isDirectory() && dirent.name !== "shared")
+    .map((dirent) => dirent.name);
 }
 
 function generateDebugPage(templates: string[]): string {
@@ -301,7 +308,7 @@ function generateDebugPage(templates: string[]): string {
     <h2>Template</h2>
     <div class="control-group">
       <select id="templateSelect">
-        ${templates.map(t => `<option value="${t}">${t}</option>`).join('\n        ')}
+        ${templates.map((t) => `<option value="${t}">${t}</option>`).join("\n        ")}
       </select>
     </div>
     
@@ -794,7 +801,7 @@ export async function startDebugServer(port: number = 3333): Promise<Server<unkn
   const templates = getAvailableTemplates();
 
   console.log(`📂 Templates directory: ${templatesDir}`);
-  console.log(`📋 Available templates: ${templates.join(', ')}`);
+  console.log(`📋 Available templates: ${templates.join(", ")}`);
 
   const server = Bun.serve({
     port,
@@ -827,15 +834,18 @@ export async function startDebugServer(port: number = 3333): Promise<Server<unkn
           const updateParam = getUrlParams<{ update: string }>(expandedUrl).update;
           const update = updateParam && /^\d+$/.test(updateParam) ? updateParam : "";
 
-          return new Response(JSON.stringify({
-            site: site || "aje",
-            postType: postType || "post",
-            slug: slug || "",
-            update,
-            expandedUrl,
-          }), {
-            headers: { "Content-Type": "application/json" },
-          });
+          return new Response(
+            JSON.stringify({
+              site: site || "aje",
+              postType: postType || "post",
+              slug: slug || "",
+              update,
+              expandedUrl,
+            }),
+            {
+              headers: { "Content-Type": "application/json" },
+            },
+          );
         } catch (error) {
           console.error("[Debug] Error parsing URL:", error);
           return new Response(JSON.stringify({ error: "Failed to parse URL" }), {
@@ -882,18 +892,18 @@ export async function startDebugServer(port: number = 3333): Promise<Server<unkn
       // Handle preview requests
       if (pathname === "/preview") {
         let template = url.searchParams.get("template") || "default";
-        let site = url.searchParams.get("site") || DEFAULT_CONTENT.site;
-        let postType = url.searchParams.get("postType") || DEFAULT_CONTENT.postType;
-        let postSlug = url.searchParams.get("postSlug") || DEFAULT_CONTENT.slug;
-        let update = url.searchParams.get("update") || "";
+        const site = url.searchParams.get("site") || DEFAULT_CONTENT.site;
+        const postType = url.searchParams.get("postType") || DEFAULT_CONTENT.postType;
+        const postSlug = url.searchParams.get("postSlug") || DEFAULT_CONTENT.slug;
+        const update = url.searchParams.get("update") || "";
         let articleData: ArticleData | null = null;
 
         if (req.method === "POST") {
           try {
-            const body = await req.json() as { template?: string; articleData?: ArticleData };
+            const body = (await req.json()) as { template?: string; articleData?: ArticleData };
             template = body.template || template;
             articleData = body.articleData || null;
-          } catch (error) {
+          } catch (_error) {
             return new Response("Invalid preview payload", { status: 400 });
           }
         }
@@ -904,7 +914,7 @@ export async function startDebugServer(port: number = 3333): Promise<Server<unkn
 
         if (await file.exists()) {
           let html = await file.text();
-          
+
           let debugScript: string;
           if (articleData) {
             const serialized = JSON.stringify(articleData).replace(/</g, "\\u003c");
@@ -943,9 +953,9 @@ export async function startDebugServer(port: number = 3333): Promise<Server<unkn
   </script>
 </head>`;
           }
-          
-          html = html.replace('</head>', debugScript);
-          
+
+          html = html.replace("</head>", debugScript);
+
           return new Response(html, {
             headers: { "Content-Type": "text/html" },
           });

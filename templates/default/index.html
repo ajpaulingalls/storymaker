@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1080, height=1920" />
     <title>Story</title>
-    <link rel="icon" href="data:,">
+    <link rel="icon" href="data:," />
     <link rel="stylesheet" href="/shared/base.css" />
     <style>
       @import url("https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700&family=Roboto:wght@300;400;500;700&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap");
@@ -44,18 +44,30 @@
       }
 
       @keyframes fadeInImage {
-        0% { opacity: 0; }
-        100% { opacity: 1; }
+        0% {
+          opacity: 0;
+        }
+        100% {
+          opacity: 1;
+        }
       }
 
       @keyframes panLeftToRight {
-        0% { transform: translateX(0); }
-        100% { transform: translateX(var(--pan-distance)); }
+        0% {
+          transform: translateX(0);
+        }
+        100% {
+          transform: translateX(var(--pan-distance));
+        }
       }
 
       @keyframes panRightToLeft {
-        0% { transform: translateX(var(--pan-distance)); }
-        100% { transform: translateX(0); }
+        0% {
+          transform: translateX(var(--pan-distance));
+        }
+        100% {
+          transform: translateX(0);
+        }
       }
 
       /* Top bar with logo and status */
@@ -258,7 +270,9 @@
     <div class="location-indicator">
       <div class="location-text" id="location"></div>
       <svg class="location-pin" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+        <path
+          d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"
+        />
       </svg>
     </div>
 
@@ -285,7 +299,7 @@
        * Returns the total duration of the story in milliseconds.
        * Called by the recorder to determine total frames.
        */
-      window.getStoryDuration = function() {
+      window.getStoryDuration = function () {
         return STORY_DURATION;
       };
 
@@ -313,7 +327,7 @@
         if (articleData.imageUrl) {
           const bgImage = document.getElementById("bgImage");
           bgImage.src = articleData.imageUrl;
-          
+
           await new Promise((resolve) => {
             bgImage.onload = () => {
               const viewportWidth = 1080;

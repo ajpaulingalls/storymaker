@@ -37,7 +37,7 @@ function getParams() {
       update: window.DEBUG_URL_PARAMS.update,
     };
   }
-  
+
   const params = new URLSearchParams(window.location.search);
   return {
     site: params.get("site"),
@@ -50,22 +50,22 @@ function getParams() {
 // Fetch article data from GraphQL endpoint
 async function fetchArticleData(site, postType, postSlug) {
   const config = getSiteConfig(site);
-  
+
   // Build the variables object
   const variables = {
     name: postSlug,
     postType: postType,
-    preview: ""
+    preview: "",
   };
-  
+
   // Construct the URL with proper encoding
   const params = new URLSearchParams({
     "wp-site": site,
-    "operationName": "ArchipelagoSingleArticleQuery",
-    "variables": JSON.stringify(variables),
-    "extensions": "{}"
+    operationName: "ArchipelagoSingleArticleQuery",
+    variables: JSON.stringify(variables),
+    extensions: "{}",
   });
-  
+
   const url = `https://${config.domain}/graphql?${params.toString()}`;
   console.log("StoryMaker: Fetching from URL:", url);
 
@@ -86,11 +86,11 @@ async function fetchArticleData(site, postType, postSlug) {
 
     const json = await response.json();
     console.log("StoryMaker: Response received");
-    
+
     if (!json.data || !json.data.article) {
       throw new Error("Invalid response structure: missing data.article");
     }
-    
+
     return json.data.article;
   } catch (fetchError) {
     // Log detailed error info since Error objects don't serialize well
@@ -113,9 +113,9 @@ async function fetchLiveBlogUpdate(site, postID) {
 
   const params = new URLSearchParams({
     "wp-site": site,
-    "operationName": "LiveBlogUpdateQuery",
-    "variables": JSON.stringify(variables),
-    "extensions": "{}",
+    operationName: "LiveBlogUpdateQuery",
+    variables: JSON.stringify(variables),
+    extensions: "{}",
   });
 
   const url = `https://${config.domain}/graphql?${params.toString()}`;
@@ -154,7 +154,7 @@ async function fetchLiveBlogUpdate(site, postID) {
 // Build full image URL from relative path
 function getFullImageUrl(sourceUrl, site) {
   if (!sourceUrl) return null;
-  if (sourceUrl.startsWith('http')) return sourceUrl;
+  if (sourceUrl.startsWith("http")) return sourceUrl;
   const config = getSiteConfig(site);
   return `https://${config.domain}${sourceUrl}`;
 }
@@ -162,7 +162,7 @@ function getFullImageUrl(sourceUrl, site) {
 // Extract useful article data for templates
 function extractArticleData(article, site) {
   const config = getSiteConfig(site);
-  
+
   // Get the best image URL (prefer 16:9 for video format)
   let imageUrl = null;
   if (article.featuredImage?.sourceUrl) {
@@ -170,26 +170,29 @@ function extractArticleData(article, site) {
   }
   // Try to get a sized version optimized for our viewport
   if (article.socialMediaImage?.sizes) {
-    const size16x9 = article.socialMediaImage.sizes.find(s => s.crop === 'arc-image-16-9-1920');
+    const size16x9 = article.socialMediaImage.sizes.find((s) => s.crop === "arc-image-16-9-1920");
     if (size16x9) {
       imageUrl = getFullImageUrl(size16x9.url, site);
     }
   }
 
   return {
-    title: article.title || '',
-    excerpt: article.excerpt || article.subheading || '',
+    title: article.title || "",
+    excerpt: article.excerpt || article.subheading || "",
     imageUrl: imageUrl,
-    imageCaption: article.featuredImage?.caption || article.featuredCaption || '',
-    imageCredit: article.featuredImage?.credit || '',
-    imageAlt: article.featuredImage?.alt || '',
-    category: article.primaryCategoryTermName || '',
+    imageCaption: article.featuredImage?.caption || article.featuredCaption || "",
+    imageCredit: article.featuredImage?.credit || "",
+    imageAlt: article.featuredImage?.alt || "",
+    category: article.primaryCategoryTermName || "",
     categories: article.categories || article.categoryTerms || null,
     authors: article.author || null,
-    location: article.primaryWhereTermName || '',
-    tag: article.primaryTagsTermName || '',
+    location: article.primaryWhereTermName || "",
+    tag: article.primaryTagsTermName || "",
     date: article.date ? new Date(article.date) : null,
-    source: article.source?.[0]?.name || article.writeInAuthor || (config.isRTL ? 'الجزيرة' : 'Al Jazeera'),
+    source:
+      article.source?.[0]?.name ||
+      article.writeInAuthor ||
+      (config.isRTL ? "الجزيرة" : "Al Jazeera"),
     isBreaking: article.isBreaking || false,
     isLive: article.isLive || false,
     isDeveloping: article.isDeveloping || false,
@@ -205,12 +208,12 @@ function extractArticleData(article, site) {
 }
 
 // Format date for display
-function formatDate(date, locale = 'en-US') {
-  if (!date) return '';
+function formatDate(date, locale = "en-US") {
+  if (!date) return "";
   return date.toLocaleDateString(locale, {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric'
+    month: "long",
+    day: "numeric",
+    year: "numeric",
   });
 }
 
@@ -245,7 +248,7 @@ async function initStory(options = {}) {
 
   try {
     let articleData;
-    
+
     // Check for debug mode with injected data
     if (window.DEBUG_ARTICLE_DATA) {
       console.log("StoryMaker: Debug mode - using injected article data");
@@ -267,7 +270,7 @@ async function initStory(options = {}) {
       // Fetch article data
       console.log("StoryMaker: Fetching article data...");
       const article = await fetchArticleData(site, postType, postSlug);
-      
+
       // Extract and format the data
       articleData = extractArticleData(article, site);
 
@@ -281,7 +284,7 @@ async function initStory(options = {}) {
         }
         articleData.excerpt = "";
       }
-      
+
       // Apply debug flag overrides if present (from debug server live mode)
       if (window.DEBUG_FLAG_OVERRIDES) {
         console.log("StoryMaker: Applying debug flag overrides");
@@ -290,7 +293,7 @@ async function initStory(options = {}) {
         if (window.DEBUG_FLAG_OVERRIDES.isDeveloping) articleData.isDeveloping = true;
       }
     }
-    
+
     console.log("StoryMaker: Article data:", articleData.title);
 
     // Set RTL mode if needed
@@ -310,7 +313,7 @@ async function initStory(options = {}) {
     console.log("StoryMaker: Fonts loaded");
 
     // Give the DOM and images additional time to settle
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await new Promise((resolve) => setTimeout(resolve, 300));
 
     // Signal that we're ready for recording
     console.log("StoryMaker: Signaling ready...");
@@ -322,7 +325,7 @@ async function initStory(options = {}) {
     }
 
     // Small delay for frame-by-frame capture to initialize
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     // Start animations by removing the paused state
     console.log("StoryMaker: Starting animations...");
@@ -348,14 +351,14 @@ async function initStory(options = {}) {
     if (error.stack) {
       console.error("StoryMaker: Error stack:", error.stack);
     }
-    
+
     // If we haven't signaled ready yet, we need to signal both ready and done
     // so the recorder doesn't hang waiting
     if (!hasSignaledReady && window.storyReady) {
       console.log("StoryMaker: Signaling ready (error recovery)...");
       await window.storyReady();
     }
-    
+
     // Signal done so recording stops
     if (window.storyDone) {
       console.log("StoryMaker: Signaling done (error recovery)...");

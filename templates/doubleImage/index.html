@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1080, height=1920" />
     <title>Story</title>
-    <link rel="icon" href="data:,">
+    <link rel="icon" href="data:," />
     <link rel="stylesheet" href="/shared/base.css" />
     <style>
       @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap");
@@ -190,7 +190,6 @@
         font-size: 48px;
       }
 
-
       /* Logo area */
       .logo-area {
         opacity: 0;
@@ -275,7 +274,7 @@
     <div class="bg-layer">
       <img class="bg-layer-image" id="bgLayerImage" alt="" />
     </div>
-    
+
     <!-- Black overlay to darken background -->
     <div class="bg-overlay"></div>
 
@@ -283,12 +282,19 @@
       <!-- Header with logo and location -->
       <div class="header">
         <div class="logo-area">
-          <img class="logo-image" id="logoImage" src="/shared/images/ajeWhite.png" alt="Al Jazeera" />
+          <img
+            class="logo-image"
+            id="logoImage"
+            src="/shared/images/ajeWhite.png"
+            alt="Al Jazeera"
+          />
         </div>
         <div class="location-indicator">
           <div class="location-text" id="location"></div>
           <svg class="location-pin" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+            <path
+              d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"
+            />
           </svg>
         </div>
       </div>
@@ -319,7 +325,7 @@
        * Returns the total duration of the story in milliseconds.
        * Called by the recorder to determine total frames.
        */
-      window.getStoryDuration = function() {
+      window.getStoryDuration = function () {
         return STORY_DURATION;
       };
 
@@ -333,7 +339,7 @@
         SC.setText("category", articleData.category || (articleData.isRTL ? "أخبار" : "News"));
         SC.setText("title", articleData.title);
         SC.setText("excerpt", articleData.excerpt);
-        
+
         // Set location if available
         const locationEl = document.getElementById("location");
         const locationIndicator = document.querySelector(".location-indicator");
@@ -354,16 +360,13 @@
         if (articleData.imageUrl) {
           const bgImage = document.getElementById("bgImage");
           const bgLayerImage = document.getElementById("bgLayerImage");
-          
+
           // Set both images to the same URL
           bgImage.src = articleData.imageUrl;
           bgLayerImage.src = articleData.imageUrl;
-          
+
           // Wait for images to load
-          await Promise.all([
-            SC.waitForImage(bgImage),
-            SC.waitForImage(bgLayerImage)
-          ]);
+          await Promise.all([SC.waitForImage(bgImage), SC.waitForImage(bgLayerImage)]);
         }
       }
 

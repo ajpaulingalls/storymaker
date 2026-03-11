@@ -16,12 +16,14 @@ For production deployments, configure Azure Storage for video and job persistenc
 - **Azure Table Storage**: Persists job status and metadata
 
 Set environment variable:
+
 ```bash
 export AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=..."
 export AZURE_STORAGE_CONTAINER="videos"  # Optional, defaults to "videos"
 ```
 
 Without Azure configuration, the service uses:
+
 - Local filesystem for video storage
 - In-memory job store (jobs lost on restart)
 
@@ -43,13 +45,13 @@ bun run serve
 
 The service runs on port 8080 and provides the following endpoints:
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/create-video` | POST | Create a video job (returns job ID immediately) |
-| `/api/job/{jobId}` | GET | Get job status and result |
-| `/videos/{filename}` | GET | Serve generated videos (fallback when blob storage unavailable) |
-| `/health` | GET | Health check |
-| `/` | GET | API documentation |
+| Endpoint             | Method | Description                                                     |
+| -------------------- | ------ | --------------------------------------------------------------- |
+| `/api/create-video`  | POST   | Create a video job (returns job ID immediately)                 |
+| `/api/job/{jobId}`   | GET    | Get job status and result                                       |
+| `/videos/{filename}` | GET    | Serve generated videos (fallback when blob storage unavailable) |
+| `/health`            | GET    | Health check                                                    |
+| `/`                  | GET    | API documentation                                               |
 
 #### Create Video Request
 
@@ -81,6 +83,7 @@ curl http://localhost:8080/api/job/abc123-def456
 #### Job Status Response
 
 **Pending/Processing:**
+
 ```json
 {
   "jobId": "abc123-def456",
@@ -92,6 +95,7 @@ curl http://localhost:8080/api/job/abc123-def456
 ```
 
 **Completed:**
+
 ```json
 {
   "jobId": "abc123-def456",
@@ -104,6 +108,7 @@ curl http://localhost:8080/api/job/abc123-def456
 ```
 
 **Failed:**
+
 ```json
 {
   "jobId": "abc123-def456",
@@ -127,13 +132,13 @@ bun run start \
 
 #### CLI Parameters
 
-| Parameter | Description | Example |
-|-----------|-------------|---------|
-| `--template` | Name of the template folder in `templates/` | `default` |
-| `--site` | WordPress site identifier | `aje` |
-| `--postType` | Post type for GraphQL query | `post` |
-| `--postSlug` | Article slug for GraphQL query | `some-article-slug` |
-| `--output` | Output video file path | `./output/story.mp4` |
+| Parameter    | Description                                 | Example              |
+| ------------ | ------------------------------------------- | -------------------- |
+| `--template` | Name of the template folder in `templates/` | `default`            |
+| `--site`     | WordPress site identifier                   | `aje`                |
+| `--postType` | Post type for GraphQL query                 | `post`               |
+| `--postSlug` | Article slug for GraphQL query              | `some-article-slug`  |
+| `--output`   | Output video file path                      | `./output/story.mp4` |
 
 #### CLI Example
 
@@ -220,50 +225,50 @@ storymaker/
 ```html
 <!DOCTYPE html>
 <html>
-<head>
-  <style>
-    /* Your custom styles for 1080x1920 viewport */
-  </style>
-</head>
-<body>
-  <div id="content">
-    <h1 id="title"></h1>
-    <p id="excerpt"></p>
-  </div>
-  
-  <script src="/shared/story.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      window.StoryMaker.initStory({
-        // Optional: custom render function
-        renderContent: (title, excerpt) => {
-          document.getElementById('title').textContent = title;
-          document.getElementById('excerpt').textContent = excerpt;
-        },
-        // Optional: custom animation function
-        animateContent: async () => {
-          // Your animation logic
-          await new Promise(r => setTimeout(r, 2000));
-        }
+  <head>
+    <style>
+      /* Your custom styles for 1080x1920 viewport */
+    </style>
+  </head>
+  <body>
+    <div id="content">
+      <h1 id="title"></h1>
+      <p id="excerpt"></p>
+    </div>
+
+    <script src="/shared/story.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        window.StoryMaker.initStory({
+          // Optional: custom render function
+          renderContent: (title, excerpt) => {
+            document.getElementById("title").textContent = title;
+            document.getElementById("excerpt").textContent = excerpt;
+          },
+          // Optional: custom animation function
+          animateContent: async () => {
+            // Your animation logic
+            await new Promise((r) => setTimeout(r, 2000));
+          },
+        });
       });
-    });
-  </script>
-</body>
+    </script>
+  </body>
 </html>
 ```
 
 ## Available Templates
 
-| Template | Description |
-|----------|-------------|
-| `default` | Standard news story with pan animation |
-| `breaking` | Breaking news style with urgent styling |
+| Template    | Description                                  |
+| ----------- | -------------------------------------------- |
+| `default`   | Standard news story with pan animation       |
+| `breaking`  | Breaking news style with urgent styling      |
 | `cinematic` | Cinematic presentation with dramatic effects |
-| `headline` | Bold headline-focused layout |
-| `kenBurns` | Ken Burns zoom/pan effect on images |
-| `minimal` | Clean, minimal design |
-| `quote` | Quote-focused layout |
-| `split` | Split-screen layout |
+| `headline`  | Bold headline-focused layout                 |
+| `kenBurns`  | Ken Burns zoom/pan effect on images          |
+| `minimal`   | Clean, minimal design                        |
+| `quote`     | Quote-focused layout                         |
+| `split`     | Split-screen layout                          |
 
 ## Debug Server
 
@@ -274,6 +279,7 @@ bun run debug
 ```
 
 Opens at http://localhost:3333 with a UI to:
+
 - Select templates
 - Toggle between AJE (English) and AJA (Arabic)
 - Toggle status flags (Breaking, Live, Developing)
@@ -327,17 +333,17 @@ Go to your GitHub repo > Settings > Secrets and variables > Actions
 
 **Add these secrets:**
 
-| Secret Name | Description |
-|-------------|-------------|
+| Secret Name         | Description                 |
+| ------------------- | --------------------------- |
 | `AZURE_CREDENTIALS` | The JSON output from step 1 |
 
 **Add these variables** (Variables tab):
 
-| Variable Name | Description | Example |
-|---------------|-------------|---------|
-| `AZURE_RESOURCE_GROUP` | Resource group name | `storymaker-rg` |
-| `AZURE_LOCATION` | Azure region | `eastus` |
-| `APP_NAME` | Base name for resources | `storymaker` |
+| Variable Name          | Description             | Example         |
+| ---------------------- | ----------------------- | --------------- |
+| `AZURE_RESOURCE_GROUP` | Resource group name     | `storymaker-rg` |
+| `AZURE_LOCATION`       | Azure region            | `eastus`        |
+| `APP_NAME`             | Base name for resources | `storymaker`    |
 
 ### Deployment
 
@@ -349,12 +355,14 @@ Go to your GitHub repo > Settings > Secrets and variables > Actions
 4. Wait for completion (~5 minutes)
 
 This creates:
+
 - Azure Container Registry
 - Azure Storage Account (for video storage via Blob Storage and job tracking via Table Storage)
 - Azure App Service Plan (B2 tier)
 - Azure Web App
 
 **Note**: After infrastructure setup, configure the App Service with:
+
 - `AZURE_STORAGE_CONNECTION_STRING`: Connection string from the storage account
 - `AZURE_STORAGE_CONTAINER`: Container name (defaults to "videos" if not set)
 
@@ -428,6 +436,7 @@ The web service automatically manages job lifecycle:
 - **Storage**: Jobs persist in Azure Table Storage (if configured) or in-memory (development)
 
 Job statuses:
+
 - `pending`: Job created, waiting to be processed
 - `processing`: Video generation in progress (includes `progress` field)
 - `completed`: Video ready (includes `url` and optional `thumbnailUrl`)

@@ -69,7 +69,7 @@ export async function startPersistentServer(port: number = 3456): Promise<Server
       // Extract template from path: /{template-name}/...
       const pathParts = pathname.slice(1).split("/");
       const template = pathParts[0];
-      
+
       if (!template) {
         return new Response("Template name required in path", { status: 400 });
       }
@@ -111,17 +111,13 @@ export async function startServer(options: TemplateServerOptions): Promise<{
     port: 0, // Let Bun pick an available port
     async fetch(req) {
       const url = new URL(req.url);
-      let pathname = url.pathname;
+      const pathname = url.pathname;
 
       console.log(`[Server] Request: ${pathname}`);
 
       // Serve the template index.html at root
       if (pathname === "/") {
-        const templatePath = join(
-          templatesDir,
-          options.template,
-          "index.html"
-        );
+        const templatePath = join(templatesDir, options.template, "index.html");
         console.log(`[Server] Serving template: ${templatePath}`);
         const file = Bun.file(templatePath);
 

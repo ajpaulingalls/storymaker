@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1080, height=1920" />
     <title>Story</title>
-    <link rel="icon" href="data:,">
+    <link rel="icon" href="data:," />
     <link rel="stylesheet" href="/shared/base.css" />
     <style>
       @import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Source+Sans+3:wght@300;400;600;700&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap");
@@ -75,7 +75,12 @@
         left: 0;
         width: 100%;
         height: 8px;
-        background: linear-gradient(90deg, var(--accent-color), var(--accent-color-alt), var(--accent-color));
+        background: linear-gradient(
+          90deg,
+          var(--accent-color),
+          var(--accent-color-alt),
+          var(--accent-color)
+        );
         transform: scaleX(0);
         transform-origin: left;
         animation: expandLine 0.8s ease-out 0.5s forwards;
@@ -188,9 +193,15 @@
         letter-spacing: 0;
       }
 
-      .tag:nth-child(1) { animation-delay: 1.2s; }
-      .tag:nth-child(2) { animation-delay: 1.35s; }
-      .tag:nth-child(3) { animation-delay: 1.5s; }
+      .tag:nth-child(1) {
+        animation-delay: 1.2s;
+      }
+      .tag:nth-child(2) {
+        animation-delay: 1.35s;
+      }
+      .tag:nth-child(3) {
+        animation-delay: 1.5s;
+      }
 
       @keyframes tagIn {
         to {
@@ -203,7 +214,7 @@
       .headline {
         font-family: "Bebas Neue", sans-serif;
         font-size: 108px;
-        line-height: 1.0;
+        line-height: 1;
         color: #ffffff;
         text-transform: uppercase;
         letter-spacing: 2px;
@@ -353,7 +364,9 @@
         display: block;
         background: #dc2626;
         color: white;
-        animation: pulse 0.6s ease-out 0.6s forwards, livePulse 2s ease-in-out 1.2s infinite;
+        animation:
+          pulse 0.6s ease-out 0.6s forwards,
+          livePulse 2s ease-in-out 1.2s infinite;
       }
 
       .status-indicator.developing {
@@ -363,7 +376,8 @@
       }
 
       @keyframes livePulse {
-        0%, 100% {
+        0%,
+        100% {
           box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
         }
         50% {
@@ -434,7 +448,7 @@
        * Returns the total duration of the story in milliseconds.
        * Called by the recorder to determine total frames.
        */
-      window.getStoryDuration = function() {
+      window.getStoryDuration = function () {
         return STORY_DURATION;
       };
 
@@ -467,7 +481,7 @@
         const tags = [];
         if (articleData.primaryTag) tags.push(articleData.primaryTag);
         if (articleData.tags && Array.isArray(articleData.tags)) {
-          articleData.tags.slice(0, 2).forEach(tag => {
+          articleData.tags.slice(0, 2).forEach((tag) => {
             if (tag.title && !tags.includes(tag.title)) {
               tags.push(tag.title);
             }

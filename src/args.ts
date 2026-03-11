@@ -39,13 +39,7 @@ export function parseArgs(): StoryMakerArgs {
   }
 
   // Validate required arguments
-  const required: (keyof StoryMakerArgs)[] = [
-    "template",
-    "site",
-    "postType",
-    "postSlug",
-    "output",
-  ];
+  const required: (keyof StoryMakerArgs)[] = ["template", "site", "postType", "postSlug", "output"];
 
   const missing = required.filter((key) => !parsed[key]);
 

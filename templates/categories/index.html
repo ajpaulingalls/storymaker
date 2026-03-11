@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1080, height=1920" />
     <title>Story</title>
-    <link rel="icon" href="data:,">
+    <link rel="icon" href="data:," />
     <link rel="stylesheet" href="/shared/base.css" />
     <style>
       @import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=Noto+Sans+Arabic:wght@400;500;600;700;800;900&display=swap");
@@ -12,8 +12,8 @@
       :root {
         --accent-color: #fa9000;
         --accent-color-alt: #e76f51;
-        --live-updates-color: #BF3640;
-        --headline-highlight-color: #BF3640;
+        --live-updates-color: #bf3640;
+        --headline-highlight-color: #bf3640;
         --overlay-color: rgba(20, 20, 20, 0.6);
         --font-arabic: "Noto Sans Arabic";
         --font-body: "Montserrat";
@@ -53,18 +53,30 @@
       }
 
       @keyframes fadeInImage {
-        0% { opacity: 0; }
-        100% { opacity: 1; }
+        0% {
+          opacity: 0;
+        }
+        100% {
+          opacity: 1;
+        }
       }
 
       @keyframes panLeftToRight {
-        0% { transform: translateX(var(--pan-start)); }
-        100% { transform: translateX(var(--pan-end)); }
+        0% {
+          transform: translateX(var(--pan-start));
+        }
+        100% {
+          transform: translateX(var(--pan-end));
+        }
       }
 
       @keyframes panRightToLeft {
-        0% { transform: translateX(var(--pan-end)); }
-        100% { transform: translateX(var(--pan-start)); }
+        0% {
+          transform: translateX(var(--pan-end));
+        }
+        100% {
+          transform: translateX(var(--pan-start));
+        }
       }
 
       /* Dark overlay covering bottom half - solid semi-transparent box */
@@ -150,7 +162,6 @@
         height: 36px;
         fill: white;
       }
-
 
       /* Content wrapper for LIVE UPDATES and headline */
       .content-wrapper {
@@ -324,7 +335,9 @@
     <div class="location-indicator">
       <div class="location-text" id="location"></div>
       <svg class="location-pin" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+        <path
+          d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"
+        />
       </svg>
     </div>
 
@@ -338,7 +351,7 @@
       <!-- Main Content -->
       <div class="content">
         <h1 class="headline" id="headline"></h1>
-        <div class="author-info" id="authorInfo" style="display: none;">
+        <div class="author-info" id="authorInfo" style="display: none">
           <div class="author-name" id="authorName"></div>
           <div class="author-job-title" id="authorJobTitle"></div>
         </div>
@@ -360,7 +373,7 @@
        * Returns the total duration of the story in milliseconds.
        * Called by the recorder to determine total frames.
        */
-      window.getStoryDuration = function() {
+      window.getStoryDuration = function () {
         return STORY_DURATION;
       };
 
@@ -369,45 +382,65 @@
        * Looks for action words, important verbs, and critical terms
        */
       function parseHeadline(text) {
-        const words = text.split(' ');
+        const words = text.split(" ");
         // Common words to highlight in live updates (action words, critical terms)
         const highlightedWords = [
-          'SHELTER', 'SHELT', 'URGES', 'URGE', 'WARNS', 'WARN', 'ALERTS', 'ALERT',
-          'BREAKING', 'CRITICAL', 'IMMEDIATE', 'EVACUATE', 'EVACUATION',
-          'ATTACK', 'ATTACKED', 'BOMB', 'BOMBING', 'STRIKE', 'STRIKES',
-          'DEATH', 'DEATHS', 'KILLED', 'INJURED', 'CASUALTIES'
+          "SHELTER",
+          "SHELT",
+          "URGES",
+          "URGE",
+          "WARNS",
+          "WARN",
+          "ALERTS",
+          "ALERT",
+          "BREAKING",
+          "CRITICAL",
+          "IMMEDIATE",
+          "EVACUATE",
+          "EVACUATION",
+          "ATTACK",
+          "ATTACKED",
+          "BOMB",
+          "BOMBING",
+          "STRIKE",
+          "STRIKES",
+          "DEATH",
+          "DEATHS",
+          "KILLED",
+          "INJURED",
+          "CASUALTIES",
         ];
-        
-        const parsedWords = words.map(word => {
+
+        const parsedWords = words.map((word) => {
           // Remove punctuation for matching
-          const cleanWord = word.toUpperCase().replace(/[^\w]/g, '');
-          const isHighlighted = highlightedWords.some(hw => 
-            cleanWord === hw || cleanWord.startsWith(hw) || cleanWord.includes(hw)
+          const cleanWord = word.toUpperCase().replace(/[^\w]/g, "");
+          const isHighlighted = highlightedWords.some(
+            (hw) => cleanWord === hw || cleanWord.startsWith(hw) || cleanWord.includes(hw),
           );
           return {
             text: word,
-            highlight: isHighlighted
+            highlight: isHighlighted,
           };
         });
-        
+
         // Ensure at least one word is highlighted (highlight longest word if none match)
-        const hasHighlight = parsedWords.some(w => w.highlight);
+        const hasHighlight = parsedWords.some((w) => w.highlight);
         if (!hasHighlight && parsedWords.length > 0) {
           // Find the longest word (by character length, excluding punctuation)
           let longestIndex = 0;
-          let longestLength = parsedWords[0].text.replace(/[^\w]/g, '').length;
-          
+          let longestLength = parsedWords[0].text.replace(/[^\w]/g, "").length;
+
           parsedWords.forEach((word, index) => {
-            const cleanLength = word.text.replace(/[^\w]/g, '').length;
+            const cleanLength = word.text.replace(/[^\w]/g, "").length;
             if (cleanLength > longestLength) {
               longestLength = cleanLength;
               longestIndex = index;
             }
           });
-          
+
           parsedWords[longestIndex].highlight = true;
         }
-        
+
         return parsedWords;
       }
 
@@ -416,26 +449,26 @@
        */
       function renderHeadline(text, container, isRTL = false) {
         if (!text || !container) return;
-        
+
         const words = parseHeadline(text);
-        container.innerHTML = '';
-        
+        container.innerHTML = "";
+
         // For RTL, reverse the word order
         const wordsToRender = isRTL ? [...words].reverse() : words;
-        
+
         wordsToRender.forEach((word, index) => {
-          const span = document.createElement('span');
-          const classes = ['headline-word'];
+          const span = document.createElement("span");
+          const classes = ["headline-word"];
           if (word.highlight) {
-            classes.push('highlight');
+            classes.push("highlight");
           }
-          span.className = classes.join(' ');
-          
+          span.className = classes.join(" ");
+
           // For RTL, add space before word (except first), for LTR add space after (except last)
           if (isRTL) {
-            span.textContent = (index > 0 ? ' ' : '') + word.text;
+            span.textContent = (index > 0 ? " " : "") + word.text;
           } else {
-            span.textContent = word.text + (index < wordsToRender.length - 1 ? ' ' : '');
+            span.textContent = word.text + (index < wordsToRender.length - 1 ? " " : "");
           }
           container.appendChild(span);
         });
@@ -444,26 +477,26 @@
       async function renderContent(articleData) {
         SC.hideLoading();
         SC.applyAccentColors(articleData);
-        
+
         // Add site-specific class to body
         if (articleData.site === "aje") {
           document.body.classList.add("site-aje");
         } else if (articleData.site === "aja") {
           document.body.classList.add("site-aja");
         }
-        
+
         // Logo image is already in HTML, no JavaScript needed
-        
+
         // Set location
         SC.setText("location", articleData.location || articleData.category || "");
-        
+
         // Set LIVE UPDATES tag text and colors based on article status and category
         const liveUpdatesTag = document.getElementById("liveUpdatesTag");
         let tagText = "";
         let tagColor = "#BF3640"; // Default live-updates-color
         let highlightColor = "#BF3640"; // Default headline highlight color
         let overlayColor = "rgba(20, 20, 20, 0.6)"; // Default overlay color
-        
+
         // Check flags first (priority)
         if (articleData.isRTL) {
           if (articleData.isLive) {
@@ -482,15 +515,15 @@
             tagText = "DEVELOPING";
           }
         }
-        
+
         // If no flags set, check categories
         if (!tagText) {
           let categorySlug = null;
           let categoryName = null;
-          
+
           // Check if categories array exists and find matching category
           if (articleData.categories && Array.isArray(articleData.categories)) {
-            const categoryMatch = articleData.categories.find(cat => {
+            const categoryMatch = articleData.categories.find((cat) => {
               const slug = cat.slug ? cat.slug.toLowerCase() : null;
               return slug === "sports" || slug === "economy" || slug === "opinion";
             });
@@ -499,7 +532,7 @@
               categoryName = categoryMatch.title || categoryMatch.name || null;
             }
           }
-          
+
           // Fallback: check if category string matches
           if (!categorySlug && articleData.category) {
             const categoryLower = articleData.category.toLowerCase();
@@ -514,7 +547,7 @@
               categoryName = articleData.category;
             }
           }
-          
+
           // Apply category-specific styling
           if (categorySlug === "sports") {
             tagText = categoryName ? categoryName.toUpperCase() : "SPORTS";
@@ -538,25 +571,29 @@
             tagText = articleData.isRTL ? "تحديثات مباشرة" : "LIVE UPDATES";
           }
         }
-        
+
         // Set the text
         liveUpdatesTag.textContent = tagText;
-        
+
         // Apply colors via CSS variables
         document.documentElement.style.setProperty("--live-updates-color", tagColor);
         document.documentElement.style.setProperty("--headline-highlight-color", highlightColor);
         document.documentElement.style.setProperty("--overlay-color", overlayColor);
-        
+
         // Render headline with highlighting
         renderHeadline(articleData.title, document.getElementById("headline"), articleData.isRTL);
-        
+
         // Show author info for opinion category
         const authorInfo = document.getElementById("authorInfo");
-        if (document.body.classList.contains("category-opinion") && articleData.authors && articleData.authors.length > 0) {
+        if (
+          document.body.classList.contains("category-opinion") &&
+          articleData.authors &&
+          articleData.authors.length > 0
+        ) {
           const firstAuthor = articleData.authors[0];
           const authorNameEl = document.getElementById("authorName");
           const authorJobTitleEl = document.getElementById("authorJobTitle");
-          
+
           if (authorNameEl && firstAuthor.name) {
             authorNameEl.textContent = firstAuthor.name;
           }
@@ -567,7 +604,7 @@
             authorInfo.style.display = "block";
           }
         }
-        
+
         // Set image credit
         SC.setImageCredit("imageCredit", articleData.imageCredit, articleData.isRTL);
         SC.applyVisibility(articleData, {
@@ -582,21 +619,21 @@
         if (articleData.imageUrl) {
           const bgImage = document.getElementById("bgImage");
           bgImage.src = articleData.imageUrl;
-          
+
           await new Promise((resolve) => {
             bgImage.onload = () => {
               const viewportWidth = 1080;
               const imageWidth = bgImage.offsetWidth;
-              
+
               // Calculate pan positions for middle 2/3rds of image
               // Start: show left edge of middle 2/3rds (at W/6)
               // End: show right edge of middle 2/3rds (at 5W/6 - viewportWidth)
               const panStart = -imageWidth / 6;
-              const panEnd = -(5 * imageWidth / 6 - viewportWidth);
-              
+              const panEnd = -((5 * imageWidth) / 6 - viewportWidth);
+
               bgImage.style.setProperty("--pan-start", `${panStart}px`);
               bgImage.style.setProperty("--pan-end", `${panEnd}px`);
-              
+
               // For RTL (Arabic), pan from right to left - start positioned at right side
               const panAnimation = articleData.isRTL ? "panRightToLeft" : "panLeftToRight";
               if (articleData.isRTL) {
@@ -606,7 +643,7 @@
                 // Set initial position to show left side of middle 2/3rds
                 bgImage.style.transform = `translateX(${panStart}px)`;
               }
-              
+
               setTimeout(() => {
                 bgImage.style.animation = `fadeInImage 0.5s ease-out forwards, ${panAnimation} 11s linear forwards`;
               }, 100);

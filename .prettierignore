@@ -1,0 +1,16 @@
+node_modules/
+dist/
+videos/
+bun.lock
+*.mp4
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+*.svg
+*.ico
+*.woff
+*.woff2
+*.ttf
+*.eot

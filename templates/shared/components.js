@@ -105,9 +105,7 @@ window.StoryComponents = {
     const container = document.getElementById(containerId);
     if (!container || !tags || tags.length === 0) return;
 
-    container.innerHTML = tags
-      .map((tag) => `<span class="${tagClass}">${tag}</span>`)
-      .join("");
+    container.innerHTML = tags.map((tag) => `<span class="${tagClass}">${tag}</span>`).join("");
   },
 
   /**
@@ -142,7 +140,7 @@ window.StoryComponents = {
    * @param {Date} date - The date object
    * @param {string} locale - Locale for date formatting (default: 'en-US')
    */
-  setDate(elementId, date, locale = 'en-US') {
+  setDate(elementId, date, locale = "en-US") {
     const el = document.getElementById(elementId);
     if (el && date) {
       el.textContent = window.StoryMaker.formatDate(date, locale);
@@ -301,5 +299,5 @@ window.StoryComponents = {
     const root = document.documentElement;
     root.style.setProperty("--accent-color", articleData.accentColor || "#fa9000");
     root.style.setProperty("--accent-color-alt", articleData.accentColorAlt || "#e76f51");
-  }
+  },
 };

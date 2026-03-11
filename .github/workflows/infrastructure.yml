@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       destroy:
-        description: 'Destroy infrastructure instead of creating it'
+        description: "Destroy infrastructure instead of creating it"
         required: false
         default: false
         type: boolean
@@ -17,7 +17,7 @@ env:
 jobs:
   infrastructure:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Azure Login
         uses: azure/login@v2
@@ -30,9 +30,9 @@ jobs:
           # Create deterministic, Azure-compliant resource names
           # ACR: alphanumeric only, 5-50 chars
           # Storage: lowercase alphanumeric only, 3-24 chars
-          
+
           APP_NAME_CLEAN=$(echo "${{ env.APP_NAME }}" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]')
-          
+
           echo "acr_name=${APP_NAME_CLEAN}acr" >> $GITHUB_OUTPUT
           echo "storage_account=${APP_NAME_CLEAN}stor" >> $GITHUB_OUTPUT
           echo "storage_container=videos" >> $GITHUB_OUTPUT
@@ -112,12 +112,12 @@ jobs:
         if: ${{ inputs.destroy != true }}
         run: |
           echo "Creating web app: ${{ steps.names.outputs.web_app_name }}"
-          
+
           # Get ACR login server
           ACR_LOGIN_SERVER=$(az acr show \
             --name "${{ steps.names.outputs.acr_name }}" \
             --query loginServer -o tsv)
-          
+
           # Create web app with placeholder image (will be updated on first deploy)
           az webapp create \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
@@ -131,7 +131,7 @@ jobs:
         if: ${{ inputs.destroy != true }}
         run: |
           echo "Configuring web app..."
-          
+
           # Get ACR credentials
           ACR_LOGIN_SERVER=$(az acr show \
             --name "${{ steps.names.outputs.acr_name }}" \
@@ -142,13 +142,13 @@ jobs:
           ACR_PASSWORD=$(az acr credential show \
             --name "${{ steps.names.outputs.acr_name }}" \
             --query "passwords[0].value" -o tsv)
-          
+
           # Get storage connection string
           STORAGE_CONNECTION_STRING=$(az storage account show-connection-string \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --name "${{ steps.names.outputs.storage_account }}" \
             --query connectionString -o tsv)
-          
+
           # Configure container registry
           az webapp config container set \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
@@ -157,7 +157,7 @@ jobs:
             --docker-registry-server-user "$ACR_USERNAME" \
             --docker-registry-server-password "$ACR_PASSWORD" \
             --output none
-          
+
           # Configure app settings
           az webapp config appsettings set \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
@@ -174,21 +174,21 @@ jobs:
               CORTEX_API_URL="${{ secrets.CORTEX_API_URL }}" \
               CORTEX_API_KEY="${{ secrets.CORTEX_API_KEY }}" \
             --output none
-          
+
           # Enable container logging
           az webapp log config \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --name "${{ steps.names.outputs.web_app_name }}" \
             --docker-container-logging filesystem \
             --output none
-          
+
           # Configure health check
           az webapp config set \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --name "${{ steps.names.outputs.web_app_name }}" \
             --generic-configurations '{"healthCheckPath": "/health"}' \
             --output none
-          
+
           echo "Web app configured"
 
       - name: Output Deployment Info
@@ -197,7 +197,7 @@ jobs:
           ACR_LOGIN_SERVER=$(az acr show \
             --name "${{ steps.names.outputs.acr_name }}" \
             --query loginServer -o tsv)
-          
+
           echo ""
           echo "================================================"
           echo "Infrastructure Created Successfully!"

@@ -266,13 +266,11 @@ const VIRTUAL_CLOCK_SCRIPT = `
 })()
 `;
 
-export async function recordStory(
-  options: RecorderOptions
-): Promise<RecorderResult> {
-  const { 
-    url, 
-    outputPath, 
-    width = 1080, 
+export async function recordStory(options: RecorderOptions): Promise<RecorderResult> {
+  const {
+    url,
+    outputPath,
+    width = 1080,
     height = 1920,
     frameRate = 25,
     defaultDuration = 10000, // 10 seconds fallback
@@ -331,12 +329,12 @@ export async function recordStory(
           } catch {
             return arg.toString();
           }
-        })
+        }),
       );
-      const text = args.map(arg => 
-        typeof arg === "object" ? JSON.stringify(arg) : String(arg)
-      ).join(" ");
-      
+      const text = args
+        .map((arg) => (typeof arg === "object" ? JSON.stringify(arg) : String(arg)))
+        .join(" ");
+
       if (type === "error") {
         console.error(`[Page Error] ${text}`);
       } else if (type === "warn") {
@@ -390,7 +388,7 @@ export async function recordStory(
     console.log("Fonts loaded");
 
     // Small delay to ensure rendering is complete
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Get story duration from template (or use default) - do this BEFORE starting virtual clock
     const storyDuration = await page.evaluate((fallback) => {
@@ -399,7 +397,7 @@ export async function recordStory(
       }
       return fallback;
     }, defaultDuration);
-    
+
     console.log(`Story duration: ${storyDuration}ms (${(storyDuration / 1000).toFixed(1)}s)`);
 
     // Switch to virtual clock mode for frame-by-frame capture
@@ -415,7 +413,7 @@ export async function recordStory(
     // Calculate frame parameters
     const frameInterval = 1000 / frameRate; // ms per frame
     const totalFrames = Math.ceil((storyDuration / 1000) * frameRate);
-    
+
     console.log(`Starting frame capture: ${totalFrames} frames at ${frameRate}fps`);
     const captureStartTime = Date.now();
 
@@ -435,16 +433,16 @@ export async function recordStory(
 
       // Take screenshot - use JPEG for much faster encoding (3-5x speedup)
       const framePath = join(tempDir, `frame_${String(frame).padStart(5, "0")}.jpg`);
-      
+
       // Capture to buffer for parallel write
       const buffer = await page.screenshot({
         type: "jpeg",
         quality: 85, // Good quality for video, faster than 90+
       });
-      
+
       // Write to disk in parallel (don't await each write)
       pendingWrites.push(Bun.write(framePath, buffer).then(() => {}));
-      
+
       // Periodically flush writes to avoid memory buildup
       if (pendingWrites.length >= WRITE_BATCH_SIZE) {
         await Promise.all(pendingWrites);
@@ -455,21 +453,21 @@ export async function recordStory(
       if (frame % 10 === 0 || frame === totalFrames - 1) {
         // Frame capture is 10% to 70% of total progress
         const capturePercent = 10 + Math.round((frame / totalFrames) * 60);
-        reportProgress({ 
-          phase: "capturing", 
-          currentFrame: frame + 1, 
-          totalFrames, 
-          percent: capturePercent 
+        reportProgress({
+          phase: "capturing",
+          currentFrame: frame + 1,
+          totalFrames,
+          percent: capturePercent,
         });
       }
-      
+
       // Console logging every 25 frames (1 second of video)
       if (frame % frameRate === 0) {
         const progress = ((frame / totalFrames) * 100).toFixed(0);
         console.log(`Frame capture: ${progress}% (${frame}/${totalFrames})`);
       }
     }
-    
+
     // Wait for remaining writes to complete
     if (pendingWrites.length > 0) {
       await Promise.all(pendingWrites);
@@ -482,9 +480,10 @@ export async function recordStory(
     console.log(`Stitching ${totalFrames} frames into video: ${outputPath}`);
     reportProgress({ phase: "stitching", percent: 75 });
     const stitchStartTime = Date.now();
-    
+
     const framePattern = join(tempDir, "frame_%05d.jpg");
-    const ffmpegResult = await Bun.$`ffmpeg -y -framerate ${frameRate} -i ${framePattern} -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p ${outputPath}`;
+    const ffmpegResult =
+      await Bun.$`ffmpeg -y -framerate ${frameRate} -i ${framePattern} -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p ${outputPath}`;
 
     const stitchDuration = ((Date.now() - stitchStartTime) / 1000).toFixed(1);
 
@@ -502,11 +501,11 @@ export async function recordStory(
     // Generate thumbnail from the last frame
     const lastFramePath = join(tempDir, `frame_${String(totalFrames - 1).padStart(5, "0")}.jpg`);
     const thumbnailPath = outputPath.replace(/\.mp4$/, ".jpg");
-    
+
     console.log(`Generating thumbnail from last frame...`);
     reportProgress({ phase: "thumbnail", percent: 90 });
     const thumbnailResult = await Bun.$`ffmpeg -y -i ${lastFramePath} -q:v 2 ${thumbnailPath}`;
-    
+
     let finalThumbnailPath: string | undefined;
     if (thumbnailResult.exitCode !== 0) {
       console.warn(`Thumbnail generation failed: ${thumbnailResult.stderr.toString()}`);
