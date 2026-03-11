@@ -1,15 +1,6 @@
 import type { Server } from "bun";
 import { join, extname } from "path";
-
-const MIME_TYPES: Record<string, string> = {
-  ".html": "text/html",
-  ".js": "application/javascript",
-  ".css": "text/css",
-  ".json": "application/json",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".svg": "image/svg+xml",
-};
+import { MIME_TYPES } from "./mime-types";
 
 export interface TemplateServerOptions {
   template: string;

@@ -62,11 +62,11 @@ const SITE_CONFIG = {
   },
 };
 
-function getSiteConfig(site: string) {
+export function getSiteConfig(site: string) {
   return SITE_CONFIG[site as keyof typeof SITE_CONFIG] || SITE_CONFIG.aje;
 }
 
-function getFullImageUrl(sourceUrl: string | undefined | null, site: string): string | null {
+export function getFullImageUrl(sourceUrl: string | undefined | null, site: string): string | null {
   if (!sourceUrl) return null;
   if (sourceUrl.startsWith("http")) return sourceUrl;
   const config = getSiteConfig(site);
@@ -87,7 +87,7 @@ function getAttributeValue(tag: string, attribute: string): string {
   return match?.[1] || "";
 }
 
-function extractCaptionAndCredit(rawCaption: string): { caption: string; credit: string } {
+export function extractCaptionAndCredit(rawCaption: string): { caption: string; credit: string } {
   const captionText = stripHtml(rawCaption);
   const creditMatch = captionText.match(/\[([^\]]+)\]\s*$/);
   if (creditMatch) {
@@ -99,7 +99,7 @@ function extractCaptionAndCredit(rawCaption: string): { caption: string; credit:
   return { caption: captionText, credit: "" };
 }
 
-function extractImagesFromContent(content: string, site: string): ArticleImage[] {
+export function extractImagesFromContent(content: string, site: string): ArticleImage[] {
   if (!content) return [];
   const figures = content.match(/<figure[\s\S]*?<\/figure>/gi) || [];
   const images: ArticleImage[] = [];
@@ -272,7 +272,7 @@ async function fetchLiveBlogUpdate(site: string, postId: number) {
   return json.data.posts;
 }
 
-function extractArticleData(article: Record<string, any>, site: string): ArticleData {
+export function extractArticleData(article: Record<string, any>, site: string): ArticleData {
   const config = getSiteConfig(site);
 
   let imageUrl: string | null = null;

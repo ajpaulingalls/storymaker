@@ -26,18 +26,7 @@ import {
 } from "./urlUtils";
 import { fetchArticleDataForTemplate, type ArticleData } from "./article-fetcher";
 
-const MIME_TYPES: Record<string, string> = {
-  ".html": "text/html",
-  ".js": "application/javascript",
-  ".css": "text/css",
-  ".json": "application/json",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".svg": "image/svg+xml",
-  ".mp4": "video/mp4",
-  ".webm": "video/webm",
-};
+import { MIME_TYPES } from "./mime-types";
 
 // Social Pulse Backend configuration
 const SOCIAL_PULSE_API_URL = process.env.SOCIAL_PULSE_API_URL || "";
@@ -1992,6 +1981,20 @@ export async function startWebService(port: number = 8080): Promise<Server<undef
   console.log(`   Job Store: ${isTableStorageEnabled() ? "Azure Table Storage" : "In-memory"}\n`);
 
   return server;
+}
+
+/**
+ * Stop the web service and clean up resources
+ */
+export function stopWebService(server: Server<undefined>): void {
+  server.stop(true);
+  if (cleanupInterval) {
+    clearInterval(cleanupInterval);
+    cleanupInterval = null;
+  }
+  if (templateServer) {
+    templateServer.stop();
+  }
 }
 
 // Run directly if this is the main module

@@ -2,6 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Values
+
+This project follows Extreme Programming (XP) values:
+
+- **Communication** — Share context freely. Code, tests, and commit messages should make intent obvious. Ask questions early rather than guessing.
+- **Feedback** — Run tests and linters constantly. Short feedback loops catch problems while they're small. Pre-commit hooks enforce this automatically.
+- **Simplicity** — Do the simplest thing that works. No speculative abstractions, no premature generalization, no code "just in case." Three similar lines are better than a premature helper.
+- **Courage** — If you see a problem, you own it. Fix issues you encounter even if they're outside the original scope of your task. Don't leave broken windows. Refactor when the code tells you to. Delete dead code without hesitation.
+
 ## Project Overview
 
 StoryMaker generates portrait video stories (1080x1920, 9:16) from Al Jazeera article data. It uses Puppeteer for browser automation with frame-by-frame capture and FFmpeg for video encoding. Runs as both a CLI tool and a web service API.
@@ -19,12 +28,24 @@ bun run lint             # Run ESLint
 bun run lint:fix         # Run ESLint with auto-fix
 bun run format           # Format all files with Prettier
 bun run format:check     # Check formatting without writing
+bun test                 # Run all tests (Bun built-in test runner)
 bun run docker:build     # Build Docker image
 bun run docker:run       # Run Docker container (uses .env file)
 bun run docker:update    # Stop, rebuild, and run Docker container
 ```
 
-There are no test commands configured. Linting and formatting run automatically on pre-commit via Lefthook.
+Linting, formatting, and tests run automatically on pre-commit via Lefthook.
+
+## Testing
+
+Tests use Bun's built-in test runner and are colocated with source files (`*.test.ts`).
+
+- `src/urlUtils.test.ts` — URL parsing and manipulation (pure functions)
+- `src/job-store.test.ts` — InMemoryJobStore CRUD and cleanup
+- `src/article-fetcher.test.ts` — Data extraction helpers (getSiteConfig, getFullImageUrl, extractCaptionAndCredit, extractImagesFromContent, extractArticleData)
+- `src/args.test.ts` — CLI argument parsing (mocks Bun.argv and process.exit)
+- `src/server.test.ts` — Template URL builder + server integration
+- `src/web-service.test.ts` — REST API endpoint integration (mocks recorder, server, blob-storage)
 
 ## Architecture
 

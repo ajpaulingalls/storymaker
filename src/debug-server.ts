@@ -10,16 +10,7 @@ import {
   getUrlParams,
 } from "./urlUtils";
 import { fetchArticleDataForTemplate, type ArticleData } from "./article-fetcher";
-
-const MIME_TYPES: Record<string, string> = {
-  ".html": "text/html",
-  ".js": "application/javascript",
-  ".css": "text/css",
-  ".json": "application/json",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".svg": "image/svg+xml",
-};
+import { MIME_TYPES } from "./mime-types";
 
 // Default content parameters
 const DEFAULT_CONTENT = {
