@@ -18,7 +18,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "bun test",
-    "prepare": "lefthook install"
+    "prepare": "lefthook install || true"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
